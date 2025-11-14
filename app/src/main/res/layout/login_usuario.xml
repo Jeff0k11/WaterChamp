@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/telaLogin"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0C1F30"
+    android:orientation="vertical"
+    tools:context=".LoginUsuario" >
+
+    <ImageView
+        android:id="@+id/imagemLogo"
+        android:layout_width="match_parent"
+        android:layout_height="280dp"
+        app:srcCompat="@drawable/gemini_generated_image_k4j3ndk4j3ndk4j3_removebg_preview" />
+
+    <TextView
+        android:id="@+id/nomeLogo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="40dp"
+        android:backgroundTint="#FFFFFF"
+        android:fontFamily="@font/nosifer"
+        android:gravity="center"
+        android:text="Water Champ"
+        android:textColor="#29B2BC"
+        android:textSize="34sp" />
+
+    <TextView
+        android:id="@+id/loginUsuario"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="left"
+        android:hint="Login"
+        android:inputType="text|textEmailAddress"
+        android:padding="15dp"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#FFFFFF"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/senhaUsuario"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:gravity="left"
+        android:hint="Senha"
+        android:inputType="text|textPassword"
+        android:padding="15dp"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#FFFFFF"
+        android:textSize="20sp" />
+
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginRight="20dp"
+        android:backgroundTint="#1E7E8A"
+        android:text="Login"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/criarCadastro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:hint="Não tem uma conta? Crie uma."
+        android:textColorHint="#FFFFFF" />
+</LinearLayout>
