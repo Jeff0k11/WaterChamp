@@ -28,7 +28,7 @@
         android:textColor="#29B2BC"
         android:textSize="34sp" />
 
-    <TextView
+    <EditText
         android:id="@+id/loginUsuario"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,14 +36,14 @@
         android:layout_marginRight="20dp"
         android:layout_marginBottom="20dp"
         android:gravity="left"
-        android:hint="Login"
+        android:hint="Email"
         android:inputType="text|textEmailAddress"
         android:padding="15dp"
         android:textColor="#FFFFFF"
         android:textColorHint="#FFFFFF"
         android:textSize="20sp" />
 
-    <TextView
+    <EditText
         android:id="@+id/senhaUsuario"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -51,7 +51,7 @@
         android:layout_marginRight="20dp"
         android:gravity="left"
         android:hint="Senha"
-        android:inputType="text|textPassword"
+        android:inputType="textPassword"
         android:padding="15dp"
         android:textColor="#FFFFFF"
         android:textColorHint="#FFFFFF"
