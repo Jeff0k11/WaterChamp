@@ -2,4 +2,18 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- App Palette -->
+    <color name="background_main">#0C1F30</color>
+    <color name="primary_teal">#29B2BC</color>
+    <color name="secondary_green">#29BD97</color>
+    <color name="button_dark_teal">#1E7E8A</color>
+    <color name="error_red">#D32F2F</color>
+    
+    <!-- Semantic names -->
+    <color name="colorPrimary">@color/primary_teal</color>
+    <color name="colorPrimaryVariant">@color/button_dark_teal</color>
+    <color name="colorSecondary">@color/secondary_green</color>
+    <color name="colorOnPrimary">@color/white</color>
+    <color name="colorBackground">@color/background_main</color>
 </resources>

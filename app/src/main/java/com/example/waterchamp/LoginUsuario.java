@@ -31,9 +31,22 @@ public class LoginUsuario extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLogin);
         criarCadastro = findViewById(R.id.criarCadastro);
 
-        // Add a dummy user for testing if the database is empty
+        // Ensure test user exists in both maps
         if (UserDatabase.usuariosCadastrados.isEmpty()) {
-            UserDatabase.usuariosCadastrados.put("teste@email.com", "123456");
+            String testEmail = "teste@email.com";
+            UserDatabase.usuariosCadastrados.put(testEmail, "123456");
+            
+            // Check if test user is in usersList, if not add it
+            boolean exists = false;
+            for(User u : UserDatabase.usersList) {
+                if(u.getEmail().equals(testEmail)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if(!exists) {
+                UserDatabase.usersList.add(new User("Usuário Teste", testEmail, 0));
+            }
         }
 
         btnLogin.setOnClickListener(new View.OnClickListener() {
@@ -73,6 +86,14 @@ public class LoginUsuario extends AppCompatActivity {
 
         if (UserDatabase.usuariosCadastrados.containsKey(email) && UserDatabase.usuariosCadastrados.get(email).equals(senha)) {
             // Login bem-sucedido
+            User user = UserDatabase.getUserByEmail(email);
+            if (user == null) {
+                // Fallback if user exists in credentials but not in user list
+                user = new User("Usuário", email, 0);
+                UserDatabase.addUser(user);
+            }
+            UserDatabase.currentUser = user;
+
             Toast.makeText(this, "Login bem-sucedido!", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(LoginUsuario.this, HomeActivity.class);
             startActivity(intent);

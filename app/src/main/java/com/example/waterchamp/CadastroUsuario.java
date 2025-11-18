@@ -80,7 +80,13 @@ public class CadastroUsuario extends AppCompatActivity {
         }
 
         // Cadastro bem-sucedido
+        // Create new User object and add to database
+        User newUser = new User(nome, userEmail, 0);
+        UserDatabase.addUser(newUser);
+        
+        // Also add to the credentials map (addUser does this, but good to be explicit if logic changes)
         UserDatabase.usuariosCadastrados.put(userEmail, userSenha);
+        
         Toast.makeText(this, "Cadastro realizado com sucesso!", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(CadastroUsuario.this, LoginUsuario.class);
         startActivity(intent);
