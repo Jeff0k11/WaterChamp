@@ -33,7 +33,7 @@ public class LoginUsuario extends AppCompatActivity implements LoginController.L
         btnLogin = findViewById(R.id.btnLogin);
         criarCadastro = findViewById(R.id.criarCadastro);
 
-        controller = new LoginController(this);
+        controller = new LoginController(this, this);
 
         // Ensure test user exists in both maps
         if (UserDatabase.usuariosCadastrados.isEmpty()) {

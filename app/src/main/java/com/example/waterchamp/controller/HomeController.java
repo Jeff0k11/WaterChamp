@@ -1,42 +1,64 @@
 package com.example.waterchamp.controller;
 
+import android.content.Context;
+import com.example.waterchamp.data.repository.ConsumoRepository;
+import com.example.waterchamp.data.repository.UserRepository;
 import com.example.waterchamp.model.HistoryRecord;
 import com.example.waterchamp.model.UserDatabase;
-import java.util.Stack;
 
 public class HomeController {
     private HomeView view;
-    private Stack<Integer> historyStack = new Stack<>();
+    private ConsumoRepository consumoRepository;
+    private UserRepository userRepository;
 
-    public HomeController(HomeView view) {
+    public HomeController(HomeView view, Context context) {
         this.view = view;
+        this.consumoRepository = new ConsumoRepository(context);
+        this.userRepository = new UserRepository(context);
     }
 
     public void addWater(int amount) {
         if (UserDatabase.currentUser != null) {
             int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
-            historyStack.push(amount);
+
+            // Adicionar água usando o repository (salva local + sincroniza com servidor)
+            consumoRepository.addWater(amount);
+
+            // Atualizar UserDatabase para compatibilidade
             UserDatabase.currentUser.setWaterIntake(currentWaterIntake + amount);
             UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), amount, "Adicionado"));
+
             view.animateProgress(currentWaterIntake, currentWaterIntake + amount);
             view.updateUI();
         }
     }
 
     public void undoLastAction() {
-        if (UserDatabase.currentUser != null && !historyStack.isEmpty()) {
-            int lastAmount = historyStack.pop();
-            int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
-            UserDatabase.currentUser.setWaterIntake(currentWaterIntake - lastAmount);
-            UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), lastAmount, "Removido"));
-            view.animateProgress(currentWaterIntake, currentWaterIntake - lastAmount);
-            view.updateUI();
+        if (UserDatabase.currentUser != null && consumoRepository.hasRecordsToUndo()) {
+            HistoryRecord removed = consumoRepository.undoLastWater();
+
+            if (removed != null) {
+                int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
+                int newIntake = currentWaterIntake - removed.getAmount();
+
+                // Atualizar UserDatabase para compatibilidade
+                UserDatabase.currentUser.setWaterIntake(newIntake);
+                UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), removed.getAmount(), "Removido"));
+
+                view.animateProgress(currentWaterIntake, newIntake);
+                view.updateUI();
+            }
         } else {
             view.showToast("Nada para desfazer!");
         }
     }
 
     public void updateUI() {
+        // Atualizar consumo de hoje do cache
+        if (UserDatabase.currentUser != null) {
+            int todayTotal = consumoRepository.getTodayTotal();
+            UserDatabase.currentUser.setWaterIntake(todayTotal);
+        }
         view.updateUI();
     }
 

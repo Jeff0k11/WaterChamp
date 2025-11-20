@@ -1,0 +1,162 @@
+package com.example.waterchamp.data.repository;
+
+import android.content.Context;
+import com.example.waterchamp.data.local.PreferencesManager;
+import com.example.waterchamp.data.remote.UserService;
+import com.example.waterchamp.model.User;
+import com.example.waterchamp.utils.CoroutineHelper;
+
+/**
+ * Repository para gerenciar operações de usuário
+ * Coordena entre serviço remoto (Supabase) e cache local (SharedPreferences)
+ */
+public class UserRepository {
+    private final UserService userService;
+    private final PreferencesManager prefsManager;
+
+    public UserRepository(Context context) {
+        this.userService = new UserService();
+        this.prefsManager = new PreferencesManager(context);
+    }
+
+    /**
+     * Interface para callbacks de operações assíncronas
+     */
+    public interface AuthCallback {
+        void onSuccess(User user);
+        void onError(String message);
+    }
+
+    public interface LogoutCallback {
+        void onSuccess();
+        void onError(String message);
+    }
+
+    /**
+     * Registrar novo usuário
+     */
+    public void registerUser(String nome, String email, String senha, AuthCallback callback) {
+        CoroutineHelper.<Integer>runAsync(
+            () -> userService.registerUserBlocking(nome, email, senha),
+            (Integer userId, String error) -> {
+                if (error != null) {
+                    callback.onError(error);
+                } else if (userId != null) {
+                    // Salvar dados localmente
+                    prefsManager.setUserId(userId);
+                    prefsManager.setUserName(nome);
+                    prefsManager.setUserEmail(email);
+
+                    // Criar objeto User
+                    User user = new User(nome, email, 0);
+                    callback.onSuccess(user);
+                } else {
+                    callback.onError("Falha ao registrar usuário. Email já existe ou erro de conexão.");
+                }
+            }
+        );
+    }
+
+    /**
+     * Fazer login
+     */
+    public void login(String email, String senha, AuthCallback callback) {
+        CoroutineHelper.<UserService.Usuario>runAsync(
+            () -> {
+                Integer userId = userService.loginBlocking(email, senha);
+                if (userId != null) {
+                    return userService.getUserByIdBlocking(userId);
+                }
+                return null;
+            },
+            (UserService.Usuario usuario, String error) -> {
+                if (error != null) {
+                    callback.onError(error);
+                } else if (usuario != null) {
+                    // Salvar dados localmente
+                    prefsManager.setUserId(usuario.getId());
+                    prefsManager.setUserName(usuario.getNome());
+                    prefsManager.setUserEmail(usuario.getEmail());
+
+                    // Criar objeto User
+                    User user = new User(usuario.getNome(), usuario.getEmail(), 0);
+                    callback.onSuccess(user);
+                } else {
+                    callback.onError("Email ou senha inválidos.");
+                }
+            }
+        );
+    }
+
+    /**
+     * Fazer logout
+     */
+    public void logout(LogoutCallback callback) {
+        CoroutineHelper.<Boolean>runAsync(
+            () -> {
+                userService.logoutBlocking();
+                return true;
+            },
+            (Boolean result, String error) -> {
+                if (error != null) {
+                    callback.onError("Erro ao fazer logout: " + error);
+                } else {
+                    // Limpar dados locais
+                    prefsManager.clearUserData();
+                    callback.onSuccess();
+                }
+            }
+        );
+    }
+
+    /**
+     * Obter usuário atualmente logado (do cache local)
+     */
+    public User getCurrentUser() {
+        if (!prefsManager.isLoggedIn()) {
+            return null;
+        }
+
+        String name = prefsManager.getUserName();
+        String email = prefsManager.getUserEmail();
+        int dailyGoal = prefsManager.getDailyGoal();
+        int defaultCupSize = prefsManager.getDefaultCupSize();
+        long totalConsumed = prefsManager.getTotalConsumedAllTime();
+
+        User user = new User(name, email, 0);
+        user.setDailyGoal(dailyGoal);
+        user.setDefaultCupSize(defaultCupSize);
+        user.setProfilePictureUri(prefsManager.getProfilePictureUri());
+        user.setNotificationsEnabled(prefsManager.isNotificationsEnabled());
+
+        return user;
+    }
+
+    /**
+     * Atualizar configurações do usuário localmente
+     */
+    public void updateUserSettings(User user) {
+        prefsManager.setDailyGoal(user.getDailyGoal());
+        prefsManager.setDefaultCupSize(user.getDefaultCupSize());
+        prefsManager.setProfilePictureUri(user.getProfilePictureUri());
+        prefsManager.setNotificationsEnabled(user.isNotificationsEnabled());
+    }
+
+    /**
+     * Verificar se usuário está logado
+     */
+    public boolean isLoggedIn() {
+        return prefsManager.isLoggedIn();
+    }
+
+    /**
+     * Obter ID do usuário logado
+     */
+    public int getCurrentUserId() {
+        return prefsManager.getUserId();
+    }
+
+    public PreferencesManager getPreferencesManager() {
+        return prefsManager;
+    }
+}

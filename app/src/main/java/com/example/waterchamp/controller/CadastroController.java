@@ -1,14 +1,18 @@
 package com.example.waterchamp.controller;
 
+import android.content.Context;
 import android.text.TextUtils;
+import com.example.waterchamp.data.repository.UserRepository;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.model.UserDatabase;
 
 public class CadastroController {
     private CadastroView view;
+    private UserRepository userRepository;
 
-    public CadastroController(CadastroView view) {
+    public CadastroController(CadastroView view, Context context) {
         this.view = view;
+        this.userRepository = new UserRepository(context);
     }
 
     public void validarCadastro(String nome, String userEmail, String userSenha, String userConfirmarSenha) {
@@ -27,11 +31,6 @@ public class CadastroController {
             return;
         }
 
-        if (UserDatabase.usuariosCadastrados.containsKey(userEmail)) {
-            view.showEmailError("Este email já está cadastrado.");
-            return;
-        }
-
         if (TextUtils.isEmpty(userSenha)) {
             view.showSenhaError("Senha é obrigatória.");
             return;
@@ -47,15 +46,27 @@ public class CadastroController {
             return;
         }
 
-        // Cadastro bem-sucedido
-        // Create new User object and add to database
-        User newUser = new User(nome, userEmail, 0);
-        UserDatabase.addUser(newUser);
+        // Registrar usuário usando o repository
+        userRepository.registerUser(nome, userEmail, userSenha, new UserRepository.AuthCallback() {
+            @Override
+            public void onSuccess(User user) {
+                // Salvar no UserDatabase para compatibilidade
+                UserDatabase.currentUser = user;
+                UserDatabase.addUser(user);
+                UserDatabase.usuariosCadastrados.put(userEmail, userSenha);
 
-        // Also add to the credentials map (addUser does this, but good to be explicit if logic changes)
-        UserDatabase.usuariosCadastrados.put(userEmail, userSenha);
+                view.onCadastroSuccess();
+            }
 
-        view.onCadastroSuccess();
+            @Override
+            public void onError(String message) {
+                if (message.contains("já existe")) {
+                    view.showEmailError("Este email já está cadastrado.");
+                } else {
+                    view.showEmailError(message);
+                }
+            }
+        });
     }
 
     public interface CadastroView {

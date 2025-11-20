@@ -32,7 +32,7 @@ public class CadastroUsuario extends AppCompatActivity implements CadastroContro
         confirmarSenha = findViewById(R.id.confirmarSenha);
         btnCriar = findViewById(R.id.btnCriar);
 
-        controller = new CadastroController(this);
+        controller = new CadastroController(this, this);
 
         btnCriar.setOnClickListener(new View.OnClickListener() {
             @Override

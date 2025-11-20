@@ -1,13 +1,17 @@
 package com.example.waterchamp.controller;
 
+import android.content.Context;
+import com.example.waterchamp.data.repository.UserRepository;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.model.UserDatabase;
 
 public class LoginController {
     private LoginView view;
+    private UserRepository userRepository;
 
-    public LoginController(LoginView view) {
+    public LoginController(LoginView view, Context context) {
         this.view = view;
+        this.userRepository = new UserRepository(context);
     }
 
     public void validateLogin(String email, String senha) {
@@ -26,17 +30,20 @@ public class LoginController {
             return;
         }
 
-        if (UserDatabase.usuariosCadastrados.containsKey(email) && UserDatabase.usuariosCadastrados.get(email).equals(senha)) {
-            User user = UserDatabase.getUserByEmail(email);
-            if (user == null) {
-                user = new User("Usuário", email, 0);
-                UserDatabase.addUser(user);
+        // Fazer login usando o repository
+        userRepository.login(email, senha, new UserRepository.AuthCallback() {
+            @Override
+            public void onSuccess(User user) {
+                // Salvar no UserDatabase para compatibilidade com código existente
+                UserDatabase.currentUser = user;
+                view.onLoginSuccess();
             }
-            UserDatabase.currentUser = user;
-            view.onLoginSuccess();
-        } else {
-            view.onLoginFailure("Email ou senha inválidos.");
-        }
+
+            @Override
+            public void onError(String message) {
+                view.onLoginFailure(message);
+            }
+        });
     }
 
     public interface LoginView {

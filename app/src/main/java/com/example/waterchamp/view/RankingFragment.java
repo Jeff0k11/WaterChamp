@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -31,7 +32,7 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
         recyclerViewRanking = view.findViewById(R.id.recyclerViewRanking);
         recyclerViewRanking.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        controller = new RankingController(this);
+        controller = new RankingController(this, getContext());
 
         return view;
     }
@@ -50,6 +51,13 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
         } else {
             rankingAdapter = new RankingAdapter(rankingList);
             recyclerViewRanking.setAdapter(rankingAdapter);
+        }
+    }
+
+    @Override
+    public void showError(String message) {
+        if (getContext() != null) {
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
         }
     }
 }

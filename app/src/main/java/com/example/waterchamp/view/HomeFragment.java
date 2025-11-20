@@ -49,7 +49,7 @@ public class HomeFragment extends Fragment implements HomeController.HomeView {
         btnAddCustom = view.findViewById(R.id.btnAddCustom);
         btnUndo = view.findViewById(R.id.btnUndo);
 
-        controller = new HomeController(this);
+        controller = new HomeController(this, getContext());
 
         updateUI();
 
