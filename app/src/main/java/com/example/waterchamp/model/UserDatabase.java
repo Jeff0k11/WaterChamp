@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,10 +8,10 @@ import java.util.List;
 public class UserDatabase {
     // This map is for authentication
     public static HashMap<String, String> usuariosCadastrados = new HashMap<>();
-    
+
     // This list is for ranking
     public static List<User> usersList = new ArrayList<>();
-    
+
     // The currently logged-in user
     public static User currentUser;
 

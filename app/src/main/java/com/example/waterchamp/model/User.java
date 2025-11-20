@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +9,7 @@ public class User implements Comparable<User> {
     private String email;
     private int rank;
     private List<HistoryRecord> historyList;
-    
+
     // New fields for Profile
     private int dailyGoal = 2000; // Default 2000ml
     private int defaultCupSize = 250; // Default 250ml
@@ -30,7 +30,7 @@ public class User implements Comparable<User> {
     public String getName() {
         return name;
     }
-    
+
     public void setName(String name) {
         this.name = name;
     }
@@ -38,7 +38,7 @@ public class User implements Comparable<User> {
     public int getWaterIntake() {
         return waterIntake;
     }
-    
+
     public void setWaterIntake(int waterIntake) {
         // Calculate difference to update total
         int diff = waterIntake - this.waterIntake;
@@ -48,7 +48,7 @@ public class User implements Comparable<User> {
         if (diff < 0) {
             this.totalConsumedAllTime += diff;
         }
-        
+
         this.waterIntake = waterIntake;
     }
 
@@ -63,11 +63,11 @@ public class User implements Comparable<User> {
     public void setRank(int rank) {
         this.rank = rank;
     }
-    
+
     public List<HistoryRecord> getHistoryList() {
         return historyList;
     }
-    
+
     public void addHistoryRecord(HistoryRecord record) {
         this.historyList.add(record);
     }
@@ -99,11 +99,11 @@ public class User implements Comparable<User> {
     public void setStreak(int streak) {
         this.streak = streak;
     }
-    
+
     public long getCreationDate() {
         return creationDate;
     }
-    
+
     public String getProfilePictureUri() {
         return profilePictureUri;
     }

@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,15 +11,17 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import com.example.waterchamp.R;
+import com.example.waterchamp.controller.HistoryController;
+import com.example.waterchamp.model.HistoryRecord;
+
 import java.util.List;
 
-public class HistoryFragment extends Fragment {
+public class HistoryFragment extends Fragment implements HistoryController.HistoryView {
 
     private RecyclerView recyclerViewHistory;
     private HistoryAdapter historyAdapter;
-    private List<HistoryRecord> historyList;
+    private HistoryController controller;
 
     @Nullable
     @Override
@@ -29,27 +31,25 @@ public class HistoryFragment extends Fragment {
         recyclerViewHistory = view.findViewById(R.id.recyclerViewHistory);
         recyclerViewHistory.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        controller = new HistoryController(this);
+
         return view;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        updateHistory();
+        controller.updateHistory();
     }
 
-    private void updateHistory() {
-        if (UserDatabase.currentUser != null) {
-            historyList = new ArrayList<>(UserDatabase.currentUser.getHistoryList());
-            Collections.reverse(historyList); // Show newest first
-
-            if (historyAdapter == null) {
-                historyAdapter = new HistoryAdapter(historyList);
-                recyclerViewHistory.setAdapter(historyAdapter);
-            } else {
-                historyAdapter = new HistoryAdapter(historyList);
-                recyclerViewHistory.setAdapter(historyAdapter);
-            }
+    @Override
+    public void displayHistory(List<HistoryRecord> historyList) {
+        if (historyAdapter == null) {
+            historyAdapter = new HistoryAdapter(historyList);
+            recyclerViewHistory.setAdapter(historyAdapter);
+        } else {
+            historyAdapter = new HistoryAdapter(historyList);
+            recyclerViewHistory.setAdapter(historyAdapter);
         }
     }
 }

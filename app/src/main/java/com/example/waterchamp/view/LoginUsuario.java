@@ -1,9 +1,7 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -12,14 +10,18 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.waterchamp.R;
+import com.example.waterchamp.controller.LoginController;
+import com.example.waterchamp.model.UserDatabase;
 import com.google.android.material.snackbar.Snackbar;
 
-public class LoginUsuario extends AppCompatActivity {
+public class LoginUsuario extends AppCompatActivity implements LoginController.LoginView {
 
     private EditText loginUsuario;
     private EditText senhaUsuario;
     private Button btnLogin;
     private TextView criarCadastro;
+    private LoginController controller;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,28 +33,32 @@ public class LoginUsuario extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLogin);
         criarCadastro = findViewById(R.id.criarCadastro);
 
+        controller = new LoginController(this);
+
         // Ensure test user exists in both maps
         if (UserDatabase.usuariosCadastrados.isEmpty()) {
             String testEmail = "teste@email.com";
             UserDatabase.usuariosCadastrados.put(testEmail, "123456");
-            
+
             // Check if test user is in usersList, if not add it
             boolean exists = false;
-            for(User u : UserDatabase.usersList) {
+            for(com.example.waterchamp.model.User u : UserDatabase.usersList) {
                 if(u.getEmail().equals(testEmail)) {
                     exists = true;
                     break;
                 }
             }
             if(!exists) {
-                UserDatabase.usersList.add(new User("Usuário Teste", testEmail, 0));
+                UserDatabase.usersList.add(new com.example.waterchamp.model.User("Usuário Teste", testEmail, 0));
             }
         }
 
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                validarLogin();
+                String email = loginUsuario.getText().toString().trim();
+                String senha = senhaUsuario.getText().toString().trim();
+                controller.validateLogin(email, senha);
             }
         });
 
@@ -65,42 +71,26 @@ public class LoginUsuario extends AppCompatActivity {
         });
     }
 
-    private void validarLogin() {
-        String email = loginUsuario.getText().toString().trim();
-        String senha = senhaUsuario.getText().toString().trim();
+    @Override
+    public void showEmailError(String message) {
+        loginUsuario.setError(message);
+    }
 
-        if (TextUtils.isEmpty(email)) {
-            loginUsuario.setError("Email é obrigatório.");
-            return;
-        }
+    @Override
+    public void showPasswordError(String message) {
+        senhaUsuario.setError(message);
+    }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            loginUsuario.setError("Insira um email válido.");
-            return;
-        }
+    @Override
+    public void onLoginSuccess() {
+        Toast.makeText(this, "Login bem-sucedido!", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(LoginUsuario.this, HomeActivity.class);
+        startActivity(intent);
+        finish();
+    }
 
-        if (TextUtils.isEmpty(senha)) {
-            senhaUsuario.setError("Senha é obrigatória.");
-            return;
-        }
-
-        if (UserDatabase.usuariosCadastrados.containsKey(email) && UserDatabase.usuariosCadastrados.get(email).equals(senha)) {
-            // Login bem-sucedido
-            User user = UserDatabase.getUserByEmail(email);
-            if (user == null) {
-                // Fallback if user exists in credentials but not in user list
-                user = new User("Usuário", email, 0);
-                UserDatabase.addUser(user);
-            }
-            UserDatabase.currentUser = user;
-
-            Toast.makeText(this, "Login bem-sucedido!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(LoginUsuario.this, HomeActivity.class);
-            startActivity(intent);
-            finish();
-        } else {
-            // Credenciais inválidas
-            Snackbar.make(findViewById(R.id.telaLogin), "Email ou senha inválidos.", Snackbar.LENGTH_LONG).show();
-        }
+    @Override
+    public void onLoginFailure(String message) {
+        Snackbar.make(findViewById(R.id.telaLogin), message, Snackbar.LENGTH_LONG).show();
     }
 }

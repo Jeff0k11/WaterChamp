@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.model;
 
 public class HistoryRecord {
     private long timestamp;

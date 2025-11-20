@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
@@ -20,9 +20,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import java.util.Stack;
+import com.example.waterchamp.R;
+import com.example.waterchamp.controller.HomeController;
+import com.example.waterchamp.model.UserDatabase;
 
-public class HomeFragment extends Fragment {
+public class HomeFragment extends Fragment implements HomeController.HomeView {
 
     private ProgressBar progressBarWater;
     private TextView tvProgress;
@@ -32,8 +34,7 @@ public class HomeFragment extends Fragment {
     private Button btnAddCustom;
     private ImageButton btnUndo;
 
-    private Stack<Integer> historyStack = new Stack<>();
-    private int currentDefaultCupSize = 250; // Default
+    private HomeController controller;
 
     @Nullable
     @Override
@@ -48,19 +49,23 @@ public class HomeFragment extends Fragment {
         btnAddCustom = view.findViewById(R.id.btnAddCustom);
         btnUndo = view.findViewById(R.id.btnUndo);
 
+        controller = new HomeController(this);
+
         updateUI();
 
         btnAdd250.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                addWater(currentDefaultCupSize);
+                if (UserDatabase.currentUser != null) {
+                    controller.addWater(UserDatabase.currentUser.getDefaultCupSize());
+                }
             }
         });
 
         btnAdd500.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                addWater(500);
+                controller.addWater(500);
             }
         });
 
@@ -74,55 +79,26 @@ public class HomeFragment extends Fragment {
         btnUndo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                undoLastAction();
+                controller.undoLastAction();
             }
         });
 
         return view;
     }
 
-    private void addWater(int amount) {
-        if (UserDatabase.currentUser != null) {
-            int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
-            historyStack.push(amount);
-            animateProgress(currentWaterIntake, currentWaterIntake + amount);
-            UserDatabase.currentUser.setWaterIntake(currentWaterIntake + amount);
-            
-            // Record history
-            UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), amount, "Adicionado"));
-            
-            updateUI();
-        }
-    }
-
-    private void undoLastAction() {
-        if (UserDatabase.currentUser != null && !historyStack.isEmpty()) {
-            int lastAmount = historyStack.pop();
-            int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
-            animateProgress(currentWaterIntake, currentWaterIntake - lastAmount);
-            UserDatabase.currentUser.setWaterIntake(currentWaterIntake - lastAmount);
-            
-            // Record history
-            UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), lastAmount, "Removido"));
-            
-            updateUI();
-        } else {
-            Toast.makeText(getContext(), "Nada para desfazer!", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void updateUI() {
+    @Override
+    public void updateUI() {
         if (UserDatabase.currentUser != null) {
             int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
             int dailyGoal = UserDatabase.currentUser.getDailyGoal();
-            currentDefaultCupSize = UserDatabase.currentUser.getDefaultCupSize();
-            
+            int defaultCupSize = UserDatabase.currentUser.getDefaultCupSize();
+
             // Update button text
-            btnAdd250.setText("+" + currentDefaultCupSize + "ml");
+            btnAdd250.setText("+" + defaultCupSize + "ml");
 
             // Update max in case it changed
             progressBarWater.setMax(dailyGoal);
-            
+
             // ProgressBar update is handled by animation, but we set it here to ensure consistency
             progressBarWater.setProgress(currentWaterIntake);
 
@@ -133,14 +109,16 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    private void animateProgress(int from, int to) {
+    @Override
+    public void animateProgress(int from, int to) {
         ObjectAnimator animation = ObjectAnimator.ofInt(progressBarWater, "progress", from, to);
         animation.setDuration(500); // 0.5 second
         animation.setInterpolator(new DecelerateInterpolator());
         animation.start();
     }
 
-    private void showCustomAmountDialog() {
+    @Override
+    public void showCustomAmountDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle("Adicionar Quantidade (ml)");
 
@@ -153,8 +131,12 @@ public class HomeFragment extends Fragment {
             public void onClick(DialogInterface dialog, int which) {
                 String text = input.getText().toString();
                 if (!text.isEmpty()) {
-                    int amount = Integer.parseInt(text);
-                    addWater(amount);
+                    try {
+                        int amount = Integer.parseInt(text);
+                        controller.addWater(amount);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(getContext(), "Quantidade deve ser um número válido", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         });
@@ -168,10 +150,15 @@ public class HomeFragment extends Fragment {
 
         builder.show();
     }
-    
+
+    @Override
+    public void showToast(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     public void onResume() {
         super.onResume();
-        updateUI();
+        controller.updateUI();
     }
 }

@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.net.Uri;
 import android.view.LayoutInflater;
@@ -9,6 +9,10 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.waterchamp.R;
+import com.example.waterchamp.model.User;
+import com.example.waterchamp.model.UserDatabase;
 
 import java.util.List;
 
@@ -46,7 +50,7 @@ public class RankingAdapter extends RecyclerView.Adapter<RankingAdapter.RankingV
         holder.tvRank.setText(rankText);
         holder.tvName.setText(user.getName());
         holder.tvIntake.setText(user.getWaterIntake() + "ml");
-        
+
         if (user.getProfilePictureUri() != null) {
             try {
                 holder.imgProfile.setImageURI(Uri.parse(user.getProfilePictureUri()));
@@ -59,7 +63,7 @@ public class RankingAdapter extends RecyclerView.Adapter<RankingAdapter.RankingV
             holder.imgProfile.setImageResource(R.drawable.ic_profile);
             holder.imgProfile.setPadding(8, 8, 8, 8);
         }
-        
+
         // Highlight current user
         if (UserDatabase.currentUser != null && user.getEmail().equals(UserDatabase.currentUser.getEmail())) {
              holder.itemView.setBackgroundColor(holder.itemView.getContext().getResources().getColor(R.color.button_dark_teal));

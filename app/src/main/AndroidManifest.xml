@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WaterChamp">
         <activity
-            android:name=".LoginUsuario"
+            android:name="com.example.waterchamp.view.LoginUsuario"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -20,8 +20,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".CadastroUsuario" />
-        <activity android:name=".HomeActivity" />
+        <activity android:name="com.example.waterchamp.view.CadastroUsuario" />
+        <activity android:name="com.example.waterchamp.view.HomeActivity" />
         <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />

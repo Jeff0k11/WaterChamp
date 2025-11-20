@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,15 +11,17 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import com.example.waterchamp.R;
+import com.example.waterchamp.controller.RankingController;
+import com.example.waterchamp.model.User;
+
 import java.util.List;
 
-public class RankingFragment extends Fragment {
+public class RankingFragment extends Fragment implements RankingController.RankingView {
 
     private RecyclerView recyclerViewRanking;
     private RankingAdapter rankingAdapter;
-    private List<User> rankingList;
+    private RankingController controller;
 
     @Nullable
     @Override
@@ -29,43 +31,23 @@ public class RankingFragment extends Fragment {
         recyclerViewRanking = view.findViewById(R.id.recyclerViewRanking);
         recyclerViewRanking.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        controller = new RankingController(this);
+
         return view;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        updateRanking();
+        controller.updateRanking();
     }
 
-    private void updateRanking() {
-        rankingList = new ArrayList<>(UserDatabase.usersList);
-        
-        // Ensure current user is in the list (or updated)
-        if (UserDatabase.currentUser != null) {
-            boolean found = false;
-            for (int i = 0; i < rankingList.size(); i++) {
-                if (rankingList.get(i).getEmail().equals(UserDatabase.currentUser.getEmail())) {
-                    rankingList.set(i, UserDatabase.currentUser); // Update current user data
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                rankingList.add(UserDatabase.currentUser);
-            }
-        }
-
-        // Sort by water intake (descending)
-        Collections.sort(rankingList);
-
+    @Override
+    public void displayRanking(List<User> rankingList) {
         if (rankingAdapter == null) {
             rankingAdapter = new RankingAdapter(rankingList);
             recyclerViewRanking.setAdapter(rankingAdapter);
         } else {
-            // In a real app, we might want to update the data in the adapter instead of creating a new one
-            // But for this simple case, re-setting or notifying data change is fine.
-            // Since we created a new list, let's just re-create adapter to be safe/simple
             rankingAdapter = new RankingAdapter(rankingList);
             recyclerViewRanking.setAdapter(rankingAdapter);
         }

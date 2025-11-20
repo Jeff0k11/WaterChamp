@@ -1,4 +1,4 @@
-package com.example.waterchamp;
+package com.example.waterchamp.view;
 
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -8,6 +8,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.waterchamp.R;
+import com.example.waterchamp.model.HistoryRecord;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -34,13 +37,13 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.HistoryV
         HistoryRecord record = historyList.get(position);
 
         holder.tvAction.setText(record.getAction());
-        
+
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
         holder.tvTime.setText(sdf.format(new Date(record.getTimestamp())));
 
         String sign = record.getAction().equals("Adicionado") ? "+" : "-";
         holder.tvAmount.setText(sign + record.getAmount() + "ml");
-        
+
         if (record.getAction().equals("Adicionado")) {
             holder.tvAmount.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.secondary_green));
         } else {
