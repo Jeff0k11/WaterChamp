@@ -24,11 +24,12 @@ class UserService {
 
     /**
      * Registrar novo usuário
-     * @return ID do usuário criado ou null em caso de erro
+     * @return Pair contendo o ID do usuário ou uma mensagem de erro
      */
-    suspend fun registerUser(nome: String, email: String, senha: String): Int? = withContext(Dispatchers.IO) {
+    suspend fun registerUser(nome: String, email: String, senha: String): Pair<Int?, String?> = withContext(Dispatchers.IO) {
         try {
             // 1. Criar usuário na autenticação Supabase
+            // IMPORTANTE: Desative a confirmação de e-mail no painel do Supabase se não for usá-la
             SupabaseClient.client.auth.signUpWith(Email) {
                 this.email = email
                 this.password = senha
@@ -47,10 +48,11 @@ class UserService {
                 }
                 .decodeSingle<Usuario>()
 
-            result.id
+            Pair(result.id, null)
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            // Retorna a mensagem de erro específica da exceção
+            Pair(null, e.message ?: "Falha no cadastro. Verifique os dados e tente novamente.")
         }
     }
 
@@ -157,7 +159,7 @@ class UserService {
 
     // Blocking versions for Java interop
 
-    fun registerUserBlocking(nome: String, email: String, senha: String): Int? = runBlocking { registerUser(nome, email, senha) }
+    fun registerUserBlocking(nome: String, email: String, senha: String): Pair<Int?, String?> = runBlocking { registerUser(nome, email, senha) }
 
     fun loginBlocking(email: String, senha: String): Int? = runBlocking { login(email, senha) }
 

@@ -6,6 +6,8 @@ import com.example.waterchamp.data.remote.UserService;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.utils.CoroutineHelper;
 
+import kotlin.Pair;
+
 /**
  * Repository para gerenciar operações de usuário
  * Coordena entre serviço remoto (Supabase) e cache local (SharedPreferences)
@@ -36,26 +38,37 @@ public class UserRepository {
      * Registrar novo usuário
      */
     public void registerUser(String nome, String email, String senha, AuthCallback callback) {
-        CoroutineHelper.<Integer>runAsync(
-            () -> userService.registerUserBlocking(nome, email, senha),
-            (Integer userId, String error) -> {
-                if (error != null) {
-                    callback.onError(error);
-                } else if (userId != null) {
-                    // Salvar dados localmente
-                    prefsManager.setUserId(userId);
-                    prefsManager.setUserName(nome);
-                    prefsManager.setUserEmail(email);
+        CoroutineHelper.<Pair<Integer, String>>runAsync(
+                () -> userService.registerUserBlocking(nome, email, senha),
+                (Pair<Integer, String> result, String error) -> {
+                    if (error != null) {
+                        // Erro de coroutine/execução
+                        callback.onError(error);
+                        return;
+                    }
 
-                    // Criar objeto User
-                    User user = new User(nome, email, 0);
-                    callback.onSuccess(user);
-                } else {
-                    callback.onError("Falha ao registrar usuário. Email já existe ou erro de conexão.");
+                    Integer userId = result.getFirst();
+                    String errorMessage = result.getSecond();
+
+                    if (errorMessage != null) {
+                        // Erro retornado pelo Supabase (ex: usuário já existe)
+                        callback.onError(errorMessage);
+                    } else if (userId != null) {
+                        // Sucesso
+                        prefsManager.setUserId(userId);
+                        prefsManager.setUserName(nome);
+                        prefsManager.setUserEmail(email);
+
+                        User user = new User(nome, email, 0);
+                        callback.onSuccess(user);
+                    } else {
+                        // Falha genérica
+                        callback.onError("Ocorreu um erro desconhecido no cadastro.");
+                    }
                 }
-            }
         );
     }
+
 
     /**
      * Fazer login

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.text.TextUtils;
 import com.example.waterchamp.data.repository.UserRepository;
 import com.example.waterchamp.model.User;
-import com.example.waterchamp.model.UserDatabase;
 
 public class CadastroController {
     private CadastroView view;
@@ -46,25 +45,17 @@ public class CadastroController {
             return;
         }
 
-        // Registrar usuário usando o repository
+        // Registrar usuário usando o repository (verificação 100% online)
         userRepository.registerUser(nome, userEmail, userSenha, new UserRepository.AuthCallback() {
             @Override
             public void onSuccess(User user) {
-                // Salvar no UserDatabase para compatibilidade
-                UserDatabase.currentUser = user;
-                UserDatabase.addUser(user);
-                UserDatabase.usuariosCadastrados.put(userEmail, userSenha);
-
                 view.onCadastroSuccess();
             }
 
             @Override
             public void onError(String message) {
-                if (message.contains("já existe")) {
-                    view.showEmailError("Este email já está cadastrado.");
-                } else {
-                    view.showEmailError(message);
-                }
+                // O UserRepository já retorna "Este email já existe." do backend
+                view.showEmailError(message);
             }
         });
     }
