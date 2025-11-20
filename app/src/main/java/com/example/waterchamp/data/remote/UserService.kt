@@ -58,17 +58,17 @@ class UserService {
 
     /**
      * Fazer login
-     * @return ID do usuário ou null em caso de erro
+     * @return Pair contendo ID do usuário ou mensagem de erro
      */
-    suspend fun login(email: String, senha: String): Int? = withContext(Dispatchers.IO) {
+    suspend fun login(email: String, senha: String): Pair<Int?, String?> = withContext(Dispatchers.IO) {
         try {
-            // Login via Supabase Auth
+            // 1. Login via Supabase Auth
             SupabaseClient.client.auth.signInWith(Email) {
                 this.email = email
                 this.password = senha
             }
 
-            // Buscar dados do usuário
+            // 2. Buscar dados do usuário na tabela
             val usuario = SupabaseClient.client
                 .from("usuarios")
                 .select {
@@ -76,12 +76,24 @@ class UserService {
                         eq("email", email)
                     }
                 }
-                .decodeSingle<Usuario>()
+                .decodeSingleOrNull<Usuario>()
 
-            usuario.id
+            if (usuario == null) {
+                Pair(null, "Usuário não encontrado no banco de dados.")
+            } else {
+                Pair(usuario.id, null)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            val errorMsg = when {
+                e.message?.contains("Invalid login credentials") == true ->
+                    "Email ou senha inválidos."
+                e.message?.contains("Email not confirmed") == true ->
+                    "Email não confirmado. Verifique sua caixa de entrada."
+                else ->
+                    "Erro ao fazer login: ${e.message}"
+            }
+            Pair(null, errorMsg)
         }
     }
 
@@ -161,7 +173,7 @@ class UserService {
 
     fun registerUserBlocking(nome: String, email: String, senha: String): Pair<Int?, String?> = runBlocking { registerUser(nome, email, senha) }
 
-    fun loginBlocking(email: String, senha: String): Int? = runBlocking { login(email, senha) }
+    fun loginBlocking(email: String, senha: String): Pair<Int?, String?> = runBlocking { login(email, senha) }
 
     fun logoutBlocking() = runBlocking { logout() }
 

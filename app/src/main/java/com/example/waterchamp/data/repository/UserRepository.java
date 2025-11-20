@@ -74,17 +74,36 @@ public class UserRepository {
      * Fazer login
      */
     public void login(String email, String senha, AuthCallback callback) {
-        CoroutineHelper.<UserService.Usuario>runAsync(
+        CoroutineHelper.<Pair<UserService.Usuario, String>>runAsync(
             () -> {
-                Integer userId = userService.loginBlocking(email, senha);
-                if (userId != null) {
-                    return userService.getUserByIdBlocking(userId);
+                Pair<Integer, String> loginResult = userService.loginBlocking(email, senha);
+
+                Integer userId = loginResult.getFirst();
+                String loginError = loginResult.getSecond();
+
+                if (loginError != null) {
+                    // Retornar erro de login
+                    return new Pair<>(null, loginError);
                 }
-                return null;
+
+                if (userId != null) {
+                    UserService.Usuario usuario = userService.getUserByIdBlocking(userId);
+                    return new Pair<>(usuario, null);
+                }
+
+                return new Pair<>(null, "Erro desconhecido no login.");
             },
-            (UserService.Usuario usuario, String error) -> {
+            (Pair<UserService.Usuario, String> result, String error) -> {
                 if (error != null) {
                     callback.onError(error);
+                    return;
+                }
+
+                UserService.Usuario usuario = result.getFirst();
+                String errorMsg = result.getSecond();
+
+                if (errorMsg != null) {
+                    callback.onError(errorMsg);
                 } else if (usuario != null) {
                     // Salvar dados localmente
                     prefsManager.setUserId(usuario.getId());
