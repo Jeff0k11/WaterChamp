@@ -53,28 +53,31 @@ public class GrupoRepository {
             return;
         }
 
-        CoroutineHelper.<List<GrupoService.GrupoData>>runAsync(
+        CoroutineHelper.runAsync(
             () -> grupoService.getUserGroupsBlocking(userId),
-            (List<GrupoService.GrupoData> grupos, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (grupos != null && !grupos.isEmpty()) {
-                    // Converter de GrupoData para Group
-                    List<Group> groupList = new ArrayList<>();
-                    for (GrupoService.GrupoData grupo : grupos) {
-                        Group group = new Group(
-                            grupo.getId(),
-                            grupo.getNome(),
-                            grupo.getDescricao(),
-                            grupo.getCriador_id(),
-                            grupo.getData_criacao(),
-                            grupo.getTotal_membros()
-                        );
-                        groupList.add(group);
+            new CoroutineHelper.CoroutineCallback<List<GrupoService.GrupoData>>() {
+                @Override
+                public void onComplete(List<GrupoService.GrupoData> grupos, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (grupos != null && !grupos.isEmpty()) {
+                        // Converter de GrupoData para Group
+                        List<Group> groupList = new ArrayList<>();
+                        for (GrupoService.GrupoData grupo : grupos) {
+                            Group group = new Group(
+                                grupo.getId(),
+                                grupo.getNome(),
+                                grupo.getDescricao(),
+                                grupo.getCriador_id(),
+                                grupo.getData_criacao(),
+                                grupo.getTotal_membros()
+                            );
+                            groupList.add(group);
+                        }
+                        callback.onSuccess(groupList);
+                    } else {
+                        callback.onSuccess(new ArrayList<>()); // Lista vazia
                     }
-                    callback.onSuccess(groupList);
-                } else {
-                    callback.onSuccess(new ArrayList<>()); // Lista vazia
                 }
             }
         );
@@ -90,23 +93,26 @@ public class GrupoRepository {
             return;
         }
 
-        CoroutineHelper.<GrupoService.GrupoData>runAsync(
+        CoroutineHelper.runAsync(
             () -> grupoService.createGroupBlocking(nome, descricao, userId),
-            (GrupoService.GrupoData grupo, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (grupo != null) {
-                    Group group = new Group(
-                        grupo.getId(),
-                        grupo.getNome(),
-                        grupo.getDescricao(),
-                        grupo.getCriador_id(),
-                        grupo.getData_criacao(),
-                        grupo.getTotal_membros()
-                    );
-                    callback.onSuccess(group);
-                } else {
-                    callback.onError("Falha ao criar grupo");
+            new CoroutineHelper.CoroutineCallback<GrupoService.GrupoData>() {
+                @Override
+                public void onComplete(GrupoService.GrupoData grupo, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (grupo != null) {
+                        Group group = new Group(
+                            grupo.getId(),
+                            grupo.getNome(),
+                            grupo.getDescricao(),
+                            grupo.getCriador_id(),
+                            grupo.getData_criacao(),
+                            grupo.getTotal_membros()
+                        );
+                        callback.onSuccess(group);
+                    } else {
+                        callback.onError("Falha ao criar grupo");
+                    }
                 }
             }
         );
@@ -122,15 +128,18 @@ public class GrupoRepository {
             return;
         }
 
-        CoroutineHelper.<Boolean>runAsync(
+        CoroutineHelper.runAsync(
             () -> grupoService.deleteGroupBlocking(groupId),
-            (Boolean success, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (Boolean.TRUE.equals(success)) {
-                    callback.onSuccess();
-                } else {
-                    callback.onError("Falha ao deletar grupo");
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean success, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (Boolean.TRUE.equals(success)) {
+                        callback.onSuccess();
+                    } else {
+                        callback.onError("Falha ao deletar grupo");
+                    }
                 }
             }
         );
@@ -140,15 +149,18 @@ public class GrupoRepository {
      * Adicionar membro a um grupo
      */
     public void addMemberToGroup(int groupId, int userId, OperationCallback callback) {
-        CoroutineHelper.<Boolean>runAsync(
+        CoroutineHelper.runAsync(
             () -> grupoService.addMemberToGroupBlocking(groupId, userId),
-            (Boolean success, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (Boolean.TRUE.equals(success)) {
-                    callback.onSuccess();
-                } else {
-                    callback.onError("Falha ao adicionar membro");
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean success, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (Boolean.TRUE.equals(success)) {
+                        callback.onSuccess();
+                    } else {
+                        callback.onError("Falha ao adicionar membro");
+                    }
                 }
             }
         );
@@ -158,17 +170,65 @@ public class GrupoRepository {
      * Remover membro de um grupo
      */
     public void removeMemberFromGroup(int groupId, int userId, OperationCallback callback) {
-        CoroutineHelper.<Boolean>runAsync(
+        CoroutineHelper.runAsync(
             () -> grupoService.removeMemberFromGroupBlocking(groupId, userId),
-            (Boolean success, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (Boolean.TRUE.equals(success)) {
-                    callback.onSuccess();
-                } else {
-                    callback.onError("Falha ao remover membro");
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean success, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (Boolean.TRUE.equals(success)) {
+                        callback.onSuccess();
+                    } else {
+                        callback.onError("Falha ao remover membro");
+                    }
                 }
             }
         );
+    }
+
+    /**
+     * Entrar em um grupo (máximo 1 grupo por usuário)
+     */
+    public void joinGroup(int groupId, OperationCallback callback) {
+        int userId = prefsManager.getUserId();
+        if (userId == -1) {
+            callback.onError("Usuário não autenticado");
+            return;
+        }
+
+        // Verificar se usuário já está em um grupo
+        getUserGroups(new GruposCallback() {
+            @Override
+            public void onSuccess(List<Group> groups) {
+                if (groups != null && !groups.isEmpty()) {
+                    // Usuário já está em um grupo
+                    callback.onError("Você só pode estar em um grupo por vez. Deixe o grupo atual primeiro.");
+                    return;
+                }
+
+                // Adicionar usuário ao grupo
+                CoroutineHelper.runAsync(
+                    () -> grupoService.addMemberToGroupBlocking(groupId, userId),
+                    new CoroutineHelper.CoroutineCallback<Boolean>() {
+                        @Override
+                        public void onComplete(Boolean success, String error) {
+                            if (error != null) {
+                                callback.onError("Erro: " + error);
+                            } else if (Boolean.TRUE.equals(success)) {
+                                callback.onSuccess();
+                            } else {
+                                callback.onError("Falha ao entrar no grupo");
+                            }
+                        }
+                    }
+                );
+            }
+
+            @Override
+            public void onError(String message) {
+                callback.onError("Erro ao verificar grupos: " + message);
+            }
+        });
     }
 }

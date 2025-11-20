@@ -19,6 +19,7 @@ public class GrupoController {
     public interface GrupoView {
         void showGroups(List<Group> groups);
         void showError(String message);
+        void showSuccess(String message);
         void showLoading();
         void hideLoading();
     }
@@ -64,6 +65,7 @@ public class GrupoController {
             @Override
             public void onSuccess(Group group) {
                 view.hideLoading();
+                view.showSuccess("Grupo '" + group.getNome() + "' criado com sucesso!");
                 // Recarregar lista de grupos
                 loadUserGroups();
             }
@@ -128,6 +130,27 @@ public class GrupoController {
 
             @Override
             public void onError(String message) {
+                view.showError(message);
+            }
+        });
+    }
+
+    /**
+     * Entrar em um grupo específico (máximo 1 grupo por usuário)
+     */
+    public void joinGroup(int groupId) {
+        view.showLoading();
+        grupoRepository.joinGroup(groupId, new GrupoRepository.OperationCallback() {
+            @Override
+            public void onSuccess() {
+                view.hideLoading();
+                // Recarregar lista de grupos
+                loadUserGroups();
+            }
+
+            @Override
+            public void onError(String message) {
+                view.hideLoading();
                 view.showError(message);
             }
         });

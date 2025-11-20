@@ -17,15 +17,34 @@
         android:textSize="28sp"
         android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btnCreateGroup"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:backgroundTint="@color/primary"
-        android:text="Criar Novo Grupo"
-        android:textColor="@color/white"
-        android:textSize="16sp" />
+        android:orientation="horizontal"
+        android:spacing="8dp">
+
+        <Button
+            android:id="@+id/btnCreateGroup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/primary"
+            android:text="Criar Grupo"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btnJoinGroup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/button_dark_teal"
+            android:text="Entrar em Grupo"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"

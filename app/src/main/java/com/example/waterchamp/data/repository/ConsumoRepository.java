@@ -109,22 +109,25 @@ public class ConsumoRepository {
         int todayTotal = historyCache.getTodayTotal();
         Date today = new Date();
 
-        CoroutineHelper.<Boolean>runAsync(
+        CoroutineHelper.runAsync(
             () -> consumoService.syncDailyConsumptionBlocking(userId, today, todayTotal),
-            (Boolean success, String error) -> {
-                if (error != null) {
-                    if (callback != null) {
-                        callback.onError("Erro: " + error);
-                    }
-                } else if (Boolean.TRUE.equals(success)) {
-                    // Atualizar timestamp de última sincronização
-                    prefsManager.setLastSyncTimestamp(System.currentTimeMillis());
-                    if (callback != null) {
-                        callback.onSuccess();
-                    }
-                } else {
-                    if (callback != null) {
-                        callback.onError("Falha ao sincronizar com servidor");
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean success, String error) {
+                    if (error != null) {
+                        if (callback != null) {
+                            callback.onError("Erro: " + error);
+                        }
+                    } else if (Boolean.TRUE.equals(success)) {
+                        // Atualizar timestamp de última sincronização
+                        prefsManager.setLastSyncTimestamp(System.currentTimeMillis());
+                        if (callback != null) {
+                            callback.onSuccess();
+                        }
+                    } else {
+                        if (callback != null) {
+                            callback.onError("Falha ao sincronizar com servidor");
+                        }
                     }
                 }
             }
@@ -141,15 +144,18 @@ public class ConsumoRepository {
             return;
         }
 
-        CoroutineHelper.<ConsumoService.ConsumoDiario>runAsync(
+        CoroutineHelper.runAsync(
             () -> consumoService.getConsumptionByDateBlocking(userId, date),
-            (ConsumoService.ConsumoDiario consumo, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (consumo != null) {
-                    callback.onSuccess(consumo.getTotal_ml());
-                } else {
-                    callback.onSuccess(0); // Nenhum consumo nessa data
+            new CoroutineHelper.CoroutineCallback<ConsumoService.ConsumoDiario>() {
+                @Override
+                public void onComplete(ConsumoService.ConsumoDiario consumo, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (consumo != null) {
+                        callback.onSuccess(consumo.getTotal_ml());
+                    } else {
+                        callback.onSuccess(0); // Nenhum consumo nessa data
+                    }
                 }
             }
         );
@@ -165,13 +171,16 @@ public class ConsumoRepository {
             return;
         }
 
-        CoroutineHelper.<List<ConsumoService.ConsumoDiario>>runAsync(
+        CoroutineHelper.runAsync(
             () -> consumoService.getConsumptionHistoryBlocking(userId, days),
-            (List<ConsumoService.ConsumoDiario> history, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else {
-                    callback.onSuccess(history);
+            new CoroutineHelper.CoroutineCallback<List<ConsumoService.ConsumoDiario>>() {
+                @Override
+                public void onComplete(List<ConsumoService.ConsumoDiario> history, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else {
+                        callback.onSuccess(history);
+                    }
                 }
             }
         );
@@ -189,13 +198,16 @@ public class ConsumoRepository {
             return;
         }
 
-        CoroutineHelper.<Integer>runAsync(
+        CoroutineHelper.runAsync(
             () -> consumoService.calculateStreakBlocking(userId, metaDiaria),
-            (Integer streak, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else {
-                    callback.onSuccess(streak);
+            new CoroutineHelper.CoroutineCallback<Integer>() {
+                @Override
+                public void onComplete(Integer streak, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else {
+                        callback.onSuccess(streak);
+                    }
                 }
             }
         );

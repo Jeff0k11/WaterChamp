@@ -38,32 +38,35 @@ public class UserRepository {
      * Registrar novo usuário
      */
     public void registerUser(String nome, String email, String senha, AuthCallback callback) {
-        CoroutineHelper.<Pair<Integer, String>>runAsync(
+        CoroutineHelper.runAsync(
                 () -> userService.registerUserBlocking(nome, email, senha),
-                (Pair<Integer, String> result, String error) -> {
-                    if (error != null) {
-                        // Erro de coroutine/execução
-                        callback.onError(error);
-                        return;
-                    }
+                new CoroutineHelper.CoroutineCallback<Pair<Integer, String>>() {
+                    @Override
+                    public void onComplete(Pair<Integer, String> result, String error) {
+                        if (error != null) {
+                            // Erro de coroutine/execução
+                            callback.onError(error);
+                            return;
+                        }
 
-                    Integer userId = result.getFirst();
-                    String errorMessage = result.getSecond();
+                        Integer userId = result.getFirst();
+                        String errorMessage = result.getSecond();
 
-                    if (errorMessage != null) {
-                        // Erro retornado pelo Supabase (ex: usuário já existe)
-                        callback.onError(errorMessage);
-                    } else if (userId != null) {
-                        // Sucesso
-                        prefsManager.setUserId(userId);
-                        prefsManager.setUserName(nome);
-                        prefsManager.setUserEmail(email);
+                        if (errorMessage != null) {
+                            // Erro retornado pelo Supabase (ex: usuário já existe)
+                            callback.onError(errorMessage);
+                        } else if (userId != null) {
+                            // Sucesso
+                            prefsManager.setUserId(userId);
+                            prefsManager.setUserName(nome);
+                            prefsManager.setUserEmail(email);
 
-                        User user = new User(nome, email, 0);
-                        callback.onSuccess(user);
-                    } else {
-                        // Falha genérica
-                        callback.onError("Ocorreu um erro desconhecido no cadastro.");
+                            User user = new User(nome, email, 0);
+                            callback.onSuccess(user);
+                        } else {
+                            // Falha genérica
+                            callback.onError("Ocorreu um erro desconhecido no cadastro.");
+                        }
                     }
                 }
         );
@@ -74,7 +77,7 @@ public class UserRepository {
      * Fazer login
      */
     public void login(String email, String senha, AuthCallback callback) {
-        CoroutineHelper.<Pair<UserService.Usuario, String>>runAsync(
+        CoroutineHelper.runAsync(
             () -> {
                 Pair<Integer, String> loginResult = userService.loginBlocking(email, senha);
 
@@ -93,28 +96,31 @@ public class UserRepository {
 
                 return new Pair<>(null, "Erro desconhecido no login.");
             },
-            (Pair<UserService.Usuario, String> result, String error) -> {
-                if (error != null) {
-                    callback.onError(error);
-                    return;
-                }
+            new CoroutineHelper.CoroutineCallback<Pair<UserService.Usuario, String>>() {
+                @Override
+                public void onComplete(Pair<UserService.Usuario, String> result, String error) {
+                    if (error != null) {
+                        callback.onError(error);
+                        return;
+                    }
 
-                UserService.Usuario usuario = result.getFirst();
-                String errorMsg = result.getSecond();
+                    UserService.Usuario usuario = result.getFirst();
+                    String errorMsg = result.getSecond();
 
-                if (errorMsg != null) {
-                    callback.onError(errorMsg);
-                } else if (usuario != null) {
-                    // Salvar dados localmente
-                    prefsManager.setUserId(usuario.getId());
-                    prefsManager.setUserName(usuario.getNome());
-                    prefsManager.setUserEmail(usuario.getEmail());
+                    if (errorMsg != null) {
+                        callback.onError(errorMsg);
+                    } else if (usuario != null) {
+                        // Salvar dados localmente
+                        prefsManager.setUserId(usuario.getId());
+                        prefsManager.setUserName(usuario.getNome());
+                        prefsManager.setUserEmail(usuario.getEmail());
 
-                    // Criar objeto User
-                    User user = new User(usuario.getNome(), usuario.getEmail(), 0);
-                    callback.onSuccess(user);
-                } else {
-                    callback.onError("Email ou senha inválidos.");
+                        // Criar objeto User
+                        User user = new User(usuario.getNome(), usuario.getEmail(), 0);
+                        callback.onSuccess(user);
+                    } else {
+                        callback.onError("Email ou senha inválidos.");
+                    }
                 }
             }
         );
@@ -124,18 +130,21 @@ public class UserRepository {
      * Fazer logout
      */
     public void logout(LogoutCallback callback) {
-        CoroutineHelper.<Boolean>runAsync(
+        CoroutineHelper.runAsync(
             () -> {
                 userService.logoutBlocking();
                 return true;
             },
-            (Boolean result, String error) -> {
-                if (error != null) {
-                    callback.onError("Erro ao fazer logout: " + error);
-                } else {
-                    // Limpar dados locais
-                    prefsManager.clearUserData();
-                    callback.onSuccess();
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean result, String error) {
+                    if (error != null) {
+                        callback.onError("Erro ao fazer logout: " + error);
+                    } else {
+                        // Limpar dados locais
+                        prefsManager.clearUserData();
+                        callback.onSuccess();
+                    }
                 }
             }
         );
