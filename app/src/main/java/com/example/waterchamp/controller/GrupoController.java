@@ -155,4 +155,27 @@ public class GrupoController {
             }
         });
     }
+
+    /**
+     * Sair de um grupo
+     * Se for o único membro, deleta o grupo automaticamente
+     */
+    public void leaveGroup(Group group) {
+        view.showLoading();
+        grupoRepository.leaveGroup(group, new GrupoRepository.OperationCallback() {
+            @Override
+            public void onSuccess() {
+                view.hideLoading();
+                view.showSuccess("Você saiu do grupo '" + group.getNome() + "'");
+                // Recarregar lista de grupos
+                loadUserGroups();
+            }
+
+            @Override
+            public void onError(String message) {
+                view.hideLoading();
+                view.showError(message);
+            }
+        });
+    }
 }

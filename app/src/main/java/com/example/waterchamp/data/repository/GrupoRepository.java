@@ -231,4 +231,64 @@ public class GrupoRepository {
             }
         });
     }
+
+    /**
+     * Sair de um grupo
+     * Se for o único membro, deleta o grupo automaticamente
+     */
+    public void leaveGroup(Group group, OperationCallback callback) {
+        int userId = prefsManager.getUserId();
+        if (userId == -1) {
+            callback.onError("Usuário não autenticado");
+            return;
+        }
+
+        // Remover usuário do grupo
+        CoroutineHelper.runAsync(
+            () -> grupoService.removeMemberFromGroupBlocking(group.getId(), userId),
+            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                @Override
+                public void onComplete(Boolean success, String error) {
+                    if (error != null) {
+                        callback.onError("Erro: " + error);
+                    } else if (Boolean.TRUE.equals(success)) {
+                        // Verificar se o grupo ficou vazio
+                        CoroutineHelper.runAsync(
+                            () -> grupoService.getGroupMembersBlocking(group.getId()),
+                            new CoroutineHelper.CoroutineCallback<List<Integer>>() {
+                                @Override
+                                public void onComplete(List<Integer> membros, String error) {
+                                    if (error != null) {
+                                        // Erro ao verificar membros, mas usuário foi removido
+                                        callback.onSuccess();
+                                    } else if (membros == null || membros.isEmpty()) {
+                                        // Grupo ficou vazio, deletar
+                                        CoroutineHelper.runAsync(
+                                            () -> grupoService.deleteGroupBlocking(group.getId()),
+                                            new CoroutineHelper.CoroutineCallback<Boolean>() {
+                                                @Override
+                                                public void onComplete(Boolean deleted, String deleteError) {
+                                                    if (deleteError != null) {
+                                                        // Falha ao deletar, mas usuário foi removido
+                                                        callback.onSuccess();
+                                                    } else {
+                                                        callback.onSuccess();
+                                                    }
+                                                }
+                                            }
+                                        );
+                                    } else {
+                                        // Grupo ainda tem membros
+                                        callback.onSuccess();
+                                    }
+                                }
+                            }
+                        );
+                    } else {
+                        callback.onError("Falha ao sair do grupo");
+                    }
+                }
+            }
+        );
+    }
 }

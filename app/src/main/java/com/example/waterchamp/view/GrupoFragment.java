@@ -55,6 +55,19 @@ public class GrupoFragment extends Fragment implements GrupoController.GrupoView
         // Inicializar controller
         grupoController = new GrupoController(this, requireContext());
 
+        // Configurar listeners do adapter
+        grupoAdapter.setOnLeaveGroupListener(group -> {
+            // Mostrar confirmação antes de sair
+            new AlertDialog.Builder(requireContext())
+                .setTitle("Sair do Grupo")
+                .setMessage("Tem certeza que deseja sair do grupo '" + group.getNome() + "'?")
+                .setPositiveButton("Sair", (dialog, which) -> {
+                    grupoController.leaveGroup(group);
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+        });
+
         // Listeners
         btnCreateGroup.setOnClickListener(v -> showCreateGroupDialog());
         btnJoinGroup.setOnClickListener(v -> showJoinGroupDialog());
