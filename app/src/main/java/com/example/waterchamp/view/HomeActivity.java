@@ -45,6 +45,8 @@ public class HomeActivity extends AppCompatActivity implements BottomNavigationV
             fragment = new RankingFragment();
         } else if (itemId == R.id.nav_history) {
             fragment = new HistoryFragment();
+        } else if (itemId == R.id.nav_grupo) {
+            fragment = new GrupoFragment();
         } else if (itemId == R.id.nav_profile) {
             fragment = new ProfileFragment();
         }

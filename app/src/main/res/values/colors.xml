@@ -16,4 +16,9 @@
     <color name="colorSecondary">@color/secondary_green</color>
     <color name="colorOnPrimary">@color/white</color>
     <color name="colorBackground">@color/background_main</color>
+
+    <!-- Additional colors for UI -->
+    <color name="primary">@color/primary_teal</color>
+    <color name="card_background">#1A3A45</color>
+    <color name="text_secondary">#A0A0A0</color>
 </resources>
