@@ -31,7 +31,7 @@ public class HistoryFragment extends Fragment implements HistoryController.Histo
         recyclerViewHistory = view.findViewById(R.id.recyclerViewHistory);
         recyclerViewHistory.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        controller = new HistoryController(this);
+        controller = new HistoryController(this, getContext());
 
         return view;
     }

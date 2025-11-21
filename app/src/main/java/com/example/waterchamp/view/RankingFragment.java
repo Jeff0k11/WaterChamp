@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.RankingController;
 import com.example.waterchamp.model.User;
+import com.google.android.material.tabs.TabLayout;
 
 import java.util.List;
 
@@ -23,6 +25,11 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
     private RecyclerView recyclerViewRanking;
     private RankingAdapter rankingAdapter;
     private RankingController controller;
+    private TabLayout tabLayout;
+    private TextView tvEmptyRanking;
+
+    private static final int TAB_GROUP = 0;
+    private static final int TAB_GLOBAL = 1;
 
     @Nullable
     @Override
@@ -32,7 +39,31 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
         recyclerViewRanking = view.findViewById(R.id.recyclerViewRanking);
         recyclerViewRanking.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        tabLayout = view.findViewById(R.id.tabLayout);
+        tvEmptyRanking = view.findViewById(R.id.tvEmptyRanking);
+
         controller = new RankingController(this, getContext());
+
+        // Configurar tabs
+        tabLayout.addTab(tabLayout.newTab().setText("Meu Grupo"));
+        tabLayout.addTab(tabLayout.newTab().setText("Global"));
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (tab.getPosition() == TAB_GROUP) {
+                    controller.updateGroupRanking();
+                } else {
+                    controller.updateGlobalRanking();
+                }
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
 
         return view;
     }
@@ -40,17 +71,31 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
     @Override
     public void onResume() {
         super.onResume();
-        controller.updateRanking();
+        // Carregar ranking do grupo por padrão
+        controller.updateGroupRanking();
     }
 
     @Override
     public void displayRanking(List<User> rankingList) {
-        if (rankingAdapter == null) {
-            rankingAdapter = new RankingAdapter(rankingList);
-            recyclerViewRanking.setAdapter(rankingAdapter);
+        if (rankingList == null || rankingList.isEmpty()) {
+            recyclerViewRanking.setVisibility(View.GONE);
+            tvEmptyRanking.setVisibility(View.VISIBLE);
+            if (tabLayout.getSelectedTabPosition() == TAB_GROUP) {
+                tvEmptyRanking.setText("Você ainda não está em nenhum grupo");
+            } else {
+                tvEmptyRanking.setText("Nenhum usuário encontrado");
+            }
         } else {
-            rankingAdapter = new RankingAdapter(rankingList);
-            recyclerViewRanking.setAdapter(rankingAdapter);
+            recyclerViewRanking.setVisibility(View.VISIBLE);
+            tvEmptyRanking.setVisibility(View.GONE);
+
+            if (rankingAdapter == null) {
+                rankingAdapter = new RankingAdapter(rankingList);
+                recyclerViewRanking.setAdapter(rankingAdapter);
+            } else {
+                rankingAdapter = new RankingAdapter(rankingList);
+                recyclerViewRanking.setAdapter(rankingAdapter);
+            }
         }
     }
 

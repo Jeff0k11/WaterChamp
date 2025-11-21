@@ -78,6 +78,57 @@ public class RankingController {
         });
     }
 
+    /**
+     * Carregar ranking do grupo do usuário logado
+     */
+    public void updateGroupRanking() {
+        rankingRepository.getUserGroupRanking(new RankingRepository.RankingCallback() {
+            @Override
+            public void onSuccess(List<User> users) {
+                if (users == null || users.isEmpty()) {
+                    view.displayRanking(new ArrayList<>());
+                    return;
+                }
+
+                view.displayRanking(users);
+            }
+
+            @Override
+            public void onError(String message) {
+                view.displayRanking(new ArrayList<>());
+                view.showError("Erro ao carregar ranking do grupo: " + message);
+            }
+        });
+    }
+
+    /**
+     * Carregar ranking global (todos os usuários)
+     */
+    public void updateGlobalRanking() {
+        rankingRepository.getDailyRanking(100, new RankingRepository.RankingCallback() {
+            @Override
+            public void onSuccess(List<User> users) {
+                if (users == null || users.isEmpty()) {
+                    view.displayRanking(new ArrayList<>());
+                    return;
+                }
+
+                // Atribuir ranks
+                for (int i = 0; i < users.size(); i++) {
+                    users.get(i).setRank(i + 1);
+                }
+
+                view.displayRanking(users);
+            }
+
+            @Override
+            public void onError(String message) {
+                view.displayRanking(new ArrayList<>());
+                view.showError("Erro ao carregar ranking global: " + message);
+            }
+        });
+    }
+
     public interface RankingView {
         void displayRanking(List<User> rankingList);
         void showError(String message);

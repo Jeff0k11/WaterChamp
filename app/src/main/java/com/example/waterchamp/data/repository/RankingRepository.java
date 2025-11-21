@@ -3,6 +3,7 @@ package com.example.waterchamp.data.repository;
 import android.content.Context;
 import com.example.waterchamp.data.local.PreferencesManager;
 import com.example.waterchamp.data.remote.RankingService;
+import com.example.waterchamp.model.Group;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.utils.CoroutineHelper;
 
@@ -16,10 +17,12 @@ import java.util.List;
 public class RankingRepository {
     private final RankingService rankingService;
     private final PreferencesManager prefsManager;
+    private final GrupoRepository grupoRepository;
 
     public RankingRepository(Context context) {
         this.rankingService = new RankingService();
         this.prefsManager = new PreferencesManager(context);
+        this.grupoRepository = new GrupoRepository(context);
     }
 
     /**
@@ -177,5 +180,32 @@ public class RankingRepository {
                 }
             }
         );
+    }
+
+    /**
+     * Buscar ranking do grupo do usuário logado
+     * Obtém o grupo do usuário e busca o ranking desse grupo
+     */
+    public void getUserGroupRanking(RankingCallback callback) {
+        // Buscar grupos do usuário
+        grupoRepository.getUserGroups(new GrupoRepository.GruposCallback() {
+            @Override
+            public void onSuccess(List<Group> groups) {
+                if (groups == null || groups.isEmpty()) {
+                    // Usuário não está em nenhum grupo
+                    callback.onSuccess(new ArrayList<>());
+                } else {
+                    // Pegar o primeiro grupo (máximo 1 grupo por usuário)
+                    int groupId = groups.get(0).getId();
+                    getGroupDailyRanking(groupId, callback);
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Se houver erro ao buscar grupos, retornar lista vazia
+                callback.onSuccess(new ArrayList<>());
+            }
+        });
     }
 }
