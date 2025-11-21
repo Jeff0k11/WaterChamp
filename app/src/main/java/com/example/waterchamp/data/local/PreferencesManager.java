@@ -20,6 +20,9 @@ public class PreferencesManager {
     private static final String KEY_PROFILE_PICTURE_URI = "profile_picture_uri";
     private static final String KEY_TOTAL_CONSUMED_ALL_TIME = "total_consumed_all_time";
     private static final String KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp";
+    private static final String KEY_REMEMBER_LOGIN = "remember_login";
+    private static final String KEY_SAVED_EMAIL = "saved_email";
+    private static final String KEY_SAVED_PASSWORD = "saved_password";
 
     private final SharedPreferences prefs;
 
@@ -110,6 +113,40 @@ public class PreferencesManager {
 
     public long getLastSyncTimestamp() {
         return prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0);
+    }
+
+    // ============ Remember Login ============
+
+    public void setRememberLogin(boolean remember) {
+        prefs.edit().putBoolean(KEY_REMEMBER_LOGIN, remember).apply();
+    }
+
+    public boolean isRememberLogin() {
+        return prefs.getBoolean(KEY_REMEMBER_LOGIN, false);
+    }
+
+    public void setSavedEmail(String email) {
+        prefs.edit().putString(KEY_SAVED_EMAIL, email).apply();
+    }
+
+    public String getSavedEmail() {
+        return prefs.getString(KEY_SAVED_EMAIL, "");
+    }
+
+    public void setSavedPassword(String password) {
+        prefs.edit().putString(KEY_SAVED_PASSWORD, password).apply();
+    }
+
+    public String getSavedPassword() {
+        return prefs.getString(KEY_SAVED_PASSWORD, "");
+    }
+
+    public void clearSavedCredentials() {
+        prefs.edit()
+            .remove(KEY_REMEMBER_LOGIN)
+            .remove(KEY_SAVED_EMAIL)
+            .remove(KEY_SAVED_PASSWORD)
+            .apply();
     }
 
     // ============ Session Management ============
