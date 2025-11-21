@@ -12,9 +12,11 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.RankingController;
+import com.example.waterchamp.data.remote.RankingRealtimeService;
 import com.example.waterchamp.model.User;
 import com.google.android.material.tabs.TabLayout;
 
@@ -27,6 +29,8 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
     private RankingController controller;
     private TabLayout tabLayout;
     private TextView tvEmptyRanking;
+    private SwipeRefreshLayout swipeRefreshLayout;
+    private RankingRealtimeService realtimeService;
 
     private static final int TAB_GROUP = 0;
     private static final int TAB_GLOBAL = 1;
@@ -41,8 +45,19 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
 
         tabLayout = view.findViewById(R.id.tabLayout);
         tvEmptyRanking = view.findViewById(R.id.tvEmptyRanking);
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
 
         controller = new RankingController(this, getContext());
+        realtimeService = new RankingRealtimeService();
+
+        // Configurar Pull-to-Refresh
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (tabLayout.getSelectedTabPosition() == TAB_GROUP) {
+                controller.updateGroupRanking();
+            } else {
+                controller.updateGlobalRanking();
+            }
+        });
 
         // Configurar tabs
         tabLayout.addTab(tabLayout.newTab().setText("Meu Grupo"));
@@ -76,7 +91,18 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        // Fragment está sendo pausado
+    }
+
+    @Override
     public void displayRanking(List<User> rankingList) {
+        // Parar indicador de carregamento
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(false);
+        }
+
         if (rankingList == null || rankingList.isEmpty()) {
             recyclerViewRanking.setVisibility(View.GONE);
             tvEmptyRanking.setVisibility(View.VISIBLE);
@@ -93,8 +119,7 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
                 rankingAdapter = new RankingAdapter(rankingList);
                 recyclerViewRanking.setAdapter(rankingAdapter);
             } else {
-                rankingAdapter = new RankingAdapter(rankingList);
-                recyclerViewRanking.setAdapter(rankingAdapter);
+                rankingAdapter.updateRanking(rankingList);
             }
         }
     }

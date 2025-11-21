@@ -41,6 +41,7 @@ object SupabaseClient {
         ) {
             install(Postgrest)
             install(Auth)
+            // Realtime será instalado quando necessário
         }
     }
 

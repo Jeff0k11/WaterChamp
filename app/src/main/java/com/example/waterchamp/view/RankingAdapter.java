@@ -77,6 +77,15 @@ public class RankingAdapter extends RecyclerView.Adapter<RankingAdapter.RankingV
         return userList.size();
     }
 
+    /**
+     * Atualiza a lista de usuários e notifica mudanças
+     * Mais eficiente que recriar o adapter
+     */
+    public void updateRanking(List<User> newUserList) {
+        this.userList = newUserList;
+        notifyDataSetChanged();
+    }
+
     static class RankingViewHolder extends RecyclerView.ViewHolder {
         TextView tvRank, tvName, tvIntake;
         ImageView imgProfile;

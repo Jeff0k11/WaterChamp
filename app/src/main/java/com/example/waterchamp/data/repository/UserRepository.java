@@ -45,7 +45,8 @@ public class UserRepository {
                     public void onComplete(Pair<Integer, String> result, String error) {
                         if (error != null) {
                             // Erro de coroutine/execução
-                            callback.onError(error);
+                            String errorMsg = tratarErroDeConexao(error);
+                            callback.onError(errorMsg);
                             return;
                         }
 
@@ -54,7 +55,8 @@ public class UserRepository {
 
                         if (errorMessage != null) {
                             // Erro retornado pelo Supabase (ex: usuário já existe)
-                            callback.onError(errorMessage);
+                            String errorMsg = tratarErroDeConexao(errorMessage);
+                            callback.onError(errorMsg);
                         } else if (userId != null) {
                             // Sucesso
                             prefsManager.setUserId(userId);
@@ -85,8 +87,9 @@ public class UserRepository {
                 String loginError = loginResult.getSecond();
 
                 if (loginError != null) {
-                    // Retornar erro de login
-                    return new Pair<>(null, loginError);
+                    // Tratar erro de conexão HTTP como "Sem internet"
+                    String errorMsg = tratarErroDeConexao(loginError);
+                    return new Pair<>(null, errorMsg);
                 }
 
                 if (userId != null) {
@@ -100,7 +103,8 @@ public class UserRepository {
                 @Override
                 public void onComplete(Pair<UserService.Usuario, String> result, String error) {
                     if (error != null) {
-                        callback.onError(error);
+                        String errorMsg = tratarErroDeConexao(error);
+                        callback.onError(errorMsg);
                         return;
                     }
 
@@ -108,7 +112,8 @@ public class UserRepository {
                     String errorMsg = result.getSecond();
 
                     if (errorMsg != null) {
-                        callback.onError(errorMsg);
+                        String mensagemAmigavel = tratarErroDeConexao(errorMsg);
+                        callback.onError(mensagemAmigavel);
                     } else if (usuario != null) {
                         // Salvar dados localmente
                         prefsManager.setUserId(usuario.getId());
@@ -124,6 +129,53 @@ public class UserRepository {
                 }
             }
         );
+    }
+
+    /**
+     * Trata erros de conexão e converte para mensagens amigáveis
+     */
+    private String tratarErroDeConexao(String erro) {
+        if (erro == null || erro.isEmpty()) {
+            return "Erro desconhecido.";
+        }
+
+        // Erros de conexão HTTP
+        if (erro.contains("HttpRequest") ||
+            erro.contains("HTTP") ||
+            erro.contains("SocketException") ||
+            erro.contains("SocketTimeoutException") ||
+            erro.contains("UnknownHostException") ||
+            erro.contains("ConnectException") ||
+            erro.contains("EOFException") ||
+            erro.contains("SSLException") ||
+            erro.contains("SSLHandshakeException") ||
+            erro.contains("CONNECT_TIMEOUT") ||
+            erro.contains("Connection refused") ||
+            erro.contains("Failed to connect")) {
+            return "Sem internet. Verifique sua conexão e tente novamente.";
+        }
+
+        // Erros de timeout
+        if (erro.contains("timeout") || erro.contains("Timeout")) {
+            return "Conexão lenta ou expirada. Tente novamente.";
+        }
+
+        // Erros de certificado SSL
+        if (erro.contains("SSL") || erro.contains("Certificate")) {
+            return "Erro de segurança na conexão. Verifique a data e hora do seu dispositivo.";
+        }
+
+        // Erros de autenticação do Supabase
+        if (erro.contains("Invalid login credentials")) {
+            return "Email ou senha inválidos.";
+        }
+
+        if (erro.contains("Email not confirmed")) {
+            return "Email não confirmado. Verifique sua caixa de entrada.";
+        }
+
+        // Retornar erro original se não se enquadrar em nenhuma categoria
+        return erro;
     }
 
     /**
