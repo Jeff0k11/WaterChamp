@@ -61,16 +61,19 @@ public class GrupoRepository {
                     if (error != null) {
                         callback.onError("Erro: " + error);
                     } else if (grupos != null && !grupos.isEmpty()) {
-                        // Converter de GrupoData para Group
+                        // Converter de GrupoData para Group e buscar contagem real de membros
                         List<Group> groupList = new ArrayList<>();
                         for (GrupoService.GrupoData grupo : grupos) {
+                            // Buscar contagem real de membros
+                            int realMemberCount = grupoService.countGroupMembersBlocking(grupo.getId());
+
                             Group group = new Group(
                                 grupo.getId(),
                                 grupo.getNome(),
                                 grupo.getDescricao(),
                                 grupo.getCriador_id(),
                                 grupo.getData_criacao(),
-                                grupo.getTotal_membros()
+                                realMemberCount
                             );
                             groupList.add(group);
                         }

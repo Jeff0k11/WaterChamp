@@ -182,6 +182,26 @@ class GrupoService {
         }
     }
 
+    /**
+     * Contar membros reais de um grupo
+     */
+    suspend fun countGroupMembers(grupoId: Int): Int = withContext(Dispatchers.IO) {
+        try {
+            SupabaseClient.client
+                .from("membros_grupo")
+                .select {
+                    filter {
+                        eq("grupo_id", grupoId)
+                    }
+                }
+                .decodeList<MembrosGrupoData>()
+                .size
+        } catch (e: Exception) {
+            e.printStackTrace()
+            0
+        }
+    }
+
     // ============ Data Classes ============
 
     @Serializable
@@ -205,4 +225,6 @@ class GrupoService {
     fun removeMemberFromGroupBlocking(grupoId: Int, usuarioId: Int): Boolean = runBlocking { removeMemberFromGroup(grupoId, usuarioId) }
 
     fun getGroupMembersBlocking(grupoId: Int): List<Int> = runBlocking { getGroupMembers(grupoId) }
+
+    fun countGroupMembersBlocking(grupoId: Int): Int = runBlocking { countGroupMembers(grupoId) }
 }
