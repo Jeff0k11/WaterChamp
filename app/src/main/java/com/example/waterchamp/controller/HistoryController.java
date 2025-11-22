@@ -23,6 +23,14 @@ public class HistoryController {
         view.displayHistory(historyList);
     }
 
+    /**
+     * Limpar todo o histórico de hoje
+     */
+    public void clearHistory() {
+        consumoRepository.clearTodayHistory();
+        updateHistory();
+    }
+
     public interface HistoryView {
         void displayHistory(List<HistoryRecord> historyList);
     }

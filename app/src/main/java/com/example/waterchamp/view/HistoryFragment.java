@@ -1,9 +1,12 @@
 package com.example.waterchamp.view;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,6 +30,7 @@ public class HistoryFragment extends Fragment implements HistoryController.Histo
     private RecyclerView recyclerViewHistory;
     private HistoryAdapter historyAdapter;
     private HistoryController controller;
+    private Button btnClearHistory;
 
     @Nullable
     @Override
@@ -36,9 +40,37 @@ public class HistoryFragment extends Fragment implements HistoryController.Histo
         recyclerViewHistory = view.findViewById(R.id.recyclerViewHistory);
         recyclerViewHistory.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        btnClearHistory = view.findViewById(R.id.btnClearHistory);
+        btnClearHistory.setOnClickListener(v -> showClearConfirmationDialog());
+
         controller = new HistoryController(this, getContext());
 
         return view;
+    }
+
+    /**
+     * Mostrar diálogo de confirmação antes de limpar histórico
+     */
+    private void showClearConfirmationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Limpar Histórico");
+        builder.setMessage("Tem certeza que deseja limpar todo o histórico de consumo de hoje? Esta ação não pode ser desfeita.");
+
+        builder.setPositiveButton("Limpar", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                controller.clearHistory();
+            }
+        });
+
+        builder.setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
     }
 
     @Override
