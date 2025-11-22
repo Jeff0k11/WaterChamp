@@ -102,10 +102,10 @@ public class RankingController {
     }
 
     /**
-     * Carregar ranking global (todos os usuários)
+     * Carregar ranking global (últimos 30 dias)
      */
     public void updateGlobalRanking() {
-        rankingRepository.getDailyRanking(100, new RankingRepository.RankingCallback() {
+        rankingRepository.getGlobalRanking(100, new RankingRepository.RankingCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 if (users == null || users.isEmpty()) {

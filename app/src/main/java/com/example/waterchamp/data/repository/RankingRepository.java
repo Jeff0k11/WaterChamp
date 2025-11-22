@@ -78,21 +78,45 @@ public class RankingRepository {
 
     /**
      * Buscar ranking global (últimos 30 dias)
+     * Usa cache local para o consumo do dia do usuário atual
      */
     public void getGlobalRanking(int limit, RankingCallback callback) {
+        Log.d("RankingRepository", "getGlobalRanking() - Buscando ranking global com limite: " + limit);
+
         CoroutineHelper.runAsync(
             () -> rankingService.getGlobalRankingBlocking(limit),
             (entries, error) -> {
                 if (error != null) {
+                    Log.e("RankingRepository", "getGlobalRanking() - Erro: " + error);
                     callback.onError("Erro ao buscar ranking global: " + error);
                 } else if (entries != null) {
+                    Log.d("RankingRepository", "getGlobalRanking() - Recebido " + entries.size() + " entries do servidor");
+
+                    // Obter consumo local do usuário atual do cache
+                    int localConsumption = historyCache.getTodayTotal();
+
                     // Converter para lista de Users
                     List<User> users = new ArrayList<>();
                     for (RankingService.RankingEntry entry : entries) {
+                        long total30dias;
+
+                        // Se for o usuário atual, usar cache local como base para hoje
+                        if (UserDatabase.currentUser != null &&
+                            entry.getNome().equalsIgnoreCase(UserDatabase.currentUser.getName())) {
+                            // Usar o total_30_dias do servidor, mas atualizar hoje com cache local
+                            long serverTotal = entry.getTotal_30_dias() != null ? entry.getTotal_30_dias() : 0;
+                            // Atualizar o valor de hoje no total 30 dias
+                            total30dias = serverTotal - historyCache.getTodayTotal() + localConsumption;
+                            Log.d("RankingRepository", "  Usuário atual (" + entry.getNome() + ") - usando cache local para hoje: " + localConsumption + "ml, total 30 dias: " + total30dias + "ml");
+                        } else {
+                            total30dias = entry.getTotal_30_dias() != null ? entry.getTotal_30_dias() : 0;
+                            Log.d("RankingRepository", "  Outro usuário (" + entry.getNome() + ") - usando servidor: " + total30dias + "ml");
+                        }
+
                         User user = new User(
                             entry.getNome(),
                             "",
-                            entry.getTotal_30_dias() != null ? entry.getTotal_30_dias().intValue() : 0
+                            (int) total30dias  // Usar o total 30 dias como waterIntake para exibição
                         );
                         user.setRank((int) entry.getPosicao());
                         users.add(user);
@@ -103,6 +127,7 @@ public class RankingRepository {
 
                     callback.onSuccess(users);
                 } else {
+                    Log.e("RankingRepository", "getGlobalRanking() - Nenhum resultado encontrado");
                     callback.onError("Nenhum resultado encontrado");
                 }
             }
