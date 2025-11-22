@@ -121,6 +121,9 @@ public class HistoryCache {
             }
         }
 
+        // Garantir que o total nunca seja negativo
+        total = Math.max(0, total);
+
         prefs.edit().putInt(KEY_TODAY_TOTAL, total).apply();
     }
 

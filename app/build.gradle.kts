@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.swiperefreshlayout)
+    implementation(libs.eventbus)
 
     // Supabase
     implementation(libs.supabase.postgrest)

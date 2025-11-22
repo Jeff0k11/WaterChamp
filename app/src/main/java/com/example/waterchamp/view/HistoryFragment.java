@@ -13,9 +13,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.HistoryController;
+import com.example.waterchamp.event.HistoryUpdateEvent;
 import com.example.waterchamp.model.HistoryRecord;
 
 import java.util.List;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 public class HistoryFragment extends Fragment implements HistoryController.HistoryView {
 
@@ -39,6 +44,23 @@ public class HistoryFragment extends Fragment implements HistoryController.Histo
     @Override
     public void onResume() {
         super.onResume();
+        EventBus.getDefault().register(this);
+        controller.updateHistory();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        EventBus.getDefault().unregister(this);
+    }
+
+    /**
+     * Escuta eventos de atualização do histórico
+     * Disposto quando addWater() ou undoLastAction() são chamados
+     */
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onHistoryUpdate(HistoryUpdateEvent event) {
+        // Recarregar histórico quando há mudanças
         controller.updateHistory();
     }
 
@@ -48,8 +70,8 @@ public class HistoryFragment extends Fragment implements HistoryController.Histo
             historyAdapter = new HistoryAdapter(historyList);
             recyclerViewHistory.setAdapter(historyAdapter);
         } else {
-            historyAdapter = new HistoryAdapter(historyList);
-            recyclerViewHistory.setAdapter(historyAdapter);
+            // Atualizar adapter em vez de recriar
+            historyAdapter.updateHistory(historyList);
         }
     }
 }

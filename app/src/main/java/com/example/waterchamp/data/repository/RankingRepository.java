@@ -1,10 +1,13 @@
 package com.example.waterchamp.data.repository;
 
 import android.content.Context;
+import android.util.Log;
+import com.example.waterchamp.data.local.HistoryCache;
 import com.example.waterchamp.data.local.PreferencesManager;
 import com.example.waterchamp.data.remote.RankingService;
 import com.example.waterchamp.model.Group;
 import com.example.waterchamp.model.User;
+import com.example.waterchamp.model.UserDatabase;
 import com.example.waterchamp.utils.CoroutineHelper;
 
 import java.util.ArrayList;
@@ -18,11 +21,13 @@ public class RankingRepository {
     private final RankingService rankingService;
     private final PreferencesManager prefsManager;
     private final GrupoRepository grupoRepository;
+    private final HistoryCache historyCache;
 
     public RankingRepository(Context context) {
         this.rankingService = new RankingService();
         this.prefsManager = new PreferencesManager(context);
         this.grupoRepository = new GrupoRepository(context);
+        this.historyCache = new HistoryCache(context);
     }
 
     /**
@@ -156,26 +161,33 @@ public class RankingRepository {
      * Buscar ranking de um grupo específico
      */
     public void getGroupDailyRanking(int groupId, RankingCallback callback) {
+        Log.d("RankingRepository", "getGroupDailyRanking() - Buscando ranking do grupo: " + groupId);
+
         CoroutineHelper.runAsync(
             () -> rankingService.getGroupDailyRankingBlocking(groupId),
             (entries, error) -> {
                 if (error != null) {
+                    Log.e("RankingRepository", "getGroupDailyRanking() - Erro: " + error);
                     callback.onError("Erro ao buscar ranking do grupo: " + error);
                 } else if (entries != null) {
+                    Log.d("RankingRepository", "getGroupDailyRanking() - Recebido " + entries.size() + " entries do servidor");
                     // Converter para lista de Users
                     List<User> users = new ArrayList<>();
                     for (RankingService.RankingEntry entry : entries) {
+                        int consumo = entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0;
                         User user = new User(
                             entry.getNome(),
                             "",
-                            entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0
+                            consumo
                         );
                         user.setRank((int) entry.getPosicao());
                         users.add(user);
+                        Log.d("RankingRepository", "  [" + entry.getPosicao() + "] " + entry.getNome() + " - " + consumo + "ml (consumo_hoje=" + entry.getConsumo_hoje() + ")");
                     }
 
                     callback.onSuccess(users);
                 } else {
+                    Log.e("RankingRepository", "getGroupDailyRanking() - Nenhum resultado encontrado");
                     callback.onError("Nenhum resultado encontrado");
                 }
             }
@@ -185,6 +197,7 @@ public class RankingRepository {
     /**
      * Buscar ranking do grupo do usuário logado
      * Obtém o grupo do usuário e busca o ranking desse grupo
+     * Usa cache local do consumo do dia para o usuário atual
      */
     public void getUserGroupRanking(RankingCallback callback) {
         // Buscar grupos do usuário
@@ -197,7 +210,7 @@ public class RankingRepository {
                 } else {
                     // Pegar o primeiro grupo (máximo 1 grupo por usuário)
                     int groupId = groups.get(0).getId();
-                    getGroupDailyRanking(groupId, callback);
+                    getGroupDailyRankingWithLocalCache(groupId, callback);
                 }
             }
 
@@ -207,5 +220,61 @@ public class RankingRepository {
                 callback.onSuccess(new ArrayList<>());
             }
         });
+    }
+
+    /**
+     * Buscar ranking do grupo, mas usar cache local para o usuário atual
+     * Substitui o consumo_hoje do servidor pelo valor do cache local
+     */
+    private void getGroupDailyRankingWithLocalCache(int groupId, RankingCallback callback) {
+        Log.d("RankingRepository", "getGroupDailyRankingWithLocalCache() - Buscando ranking do grupo: " + groupId);
+
+        CoroutineHelper.runAsync(
+            () -> rankingService.getGroupDailyRankingBlocking(groupId),
+            (entries, error) -> {
+                if (error != null) {
+                    Log.e("RankingRepository", "getGroupDailyRankingWithLocalCache() - Erro: " + error);
+                    callback.onError("Erro ao buscar ranking do grupo: " + error);
+                } else if (entries != null) {
+                    Log.d("RankingRepository", "getGroupDailyRankingWithLocalCache() - Recebido " + entries.size() + " entries do servidor");
+
+                    // Obter consumo local do usuário atual do cache
+                    int localConsumption = historyCache.getTodayTotal();
+
+                    // Converter para lista de Users
+                    List<User> users = new ArrayList<>();
+                    for (RankingService.RankingEntry entry : entries) {
+                        int consumo;
+
+                        // Se for o usuário atual, usar o cache local
+                        if (UserDatabase.currentUser != null &&
+                            entry.getNome().equalsIgnoreCase(UserDatabase.currentUser.getName())) {
+                            consumo = localConsumption;
+                            Log.d("RankingRepository", "  Usuário atual (" + entry.getNome() + ") - usando cache local: " + consumo + "ml");
+                        } else {
+                            consumo = entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0;
+                            Log.d("RankingRepository", "  Outro usuário (" + entry.getNome() + ") - usando servidor: " + consumo + "ml");
+                        }
+
+                        User user = new User(entry.getNome(), "", consumo);
+                        user.setRank((int) entry.getPosicao());
+                        users.add(user);
+                    }
+
+                    // Reordenar por consumo (maior primeiro)
+                    Collections.sort(users, (u1, u2) -> Integer.compare(u2.getWaterIntake(), u1.getWaterIntake()));
+
+                    // Atribuir novas posições baseado na ordem
+                    for (int i = 0; i < users.size(); i++) {
+                        users.get(i).setRank(i + 1);
+                    }
+
+                    callback.onSuccess(users);
+                } else {
+                    Log.e("RankingRepository", "getGroupDailyRankingWithLocalCache() - Nenhum resultado encontrado");
+                    callback.onError("Nenhum resultado encontrado");
+                }
+            }
+        );
     }
 }

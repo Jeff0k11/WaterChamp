@@ -40,8 +40,11 @@ public class User implements Comparable<User> {
     }
 
     public void setWaterIntake(int waterIntake) {
+        // Prevenir valores negativos
+        int safeWaterIntake = Math.max(0, waterIntake);
+
         // Calculate difference to update total
-        int diff = waterIntake - this.waterIntake;
+        int diff = safeWaterIntake - this.waterIntake;
         if (diff > 0) {
             this.totalConsumedAllTime += diff;
         }
@@ -49,7 +52,7 @@ public class User implements Comparable<User> {
             this.totalConsumedAllTime += diff;
         }
 
-        this.waterIntake = waterIntake;
+        this.waterIntake = safeWaterIntake;
     }
 
     public String getEmail() {

@@ -23,6 +23,7 @@ import androidx.fragment.app.Fragment;
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.HomeController;
 import com.example.waterchamp.model.UserDatabase;
+import com.google.android.material.snackbar.Snackbar;
 
 public class HomeFragment extends Fragment implements HomeController.HomeView {
 
@@ -153,7 +154,9 @@ public class HomeFragment extends Fragment implements HomeController.HomeView {
 
     @Override
     public void showToast(String message) {
-        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+        if (getView() != null) {
+            Snackbar.make(getView(), message, 800).show(); // 800ms - mais rápido
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.waterchamp.view;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,9 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
 
     private static final int TAB_GROUP = 0;
     private static final int TAB_GLOBAL = 1;
+
+    private static final long AUTO_REFRESH_INTERVAL = 2000; // 2 segundos
+    private Runnable autoRefreshRunnable;
 
     @Nullable
     @Override
@@ -86,14 +90,54 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
     @Override
     public void onResume() {
         super.onResume();
+        Log.d("RankingFragment", "onResume() - Iniciando auto-refresh do ranking");
         // Carregar ranking do grupo por padrão
         controller.updateGroupRanking();
+
+        // Iniciar auto-refresh a cada 2 segundos
+        startAutoRefresh();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        // Fragment está sendo pausado
+        Log.d("RankingFragment", "onPause() - Parando auto-refresh do ranking");
+        // Parar auto-refresh quando fragment sai de vista
+        stopAutoRefresh();
+    }
+
+    /**
+     * Inicia atualização automática do ranking a cada 2 segundos
+     */
+    private void startAutoRefresh() {
+        if (autoRefreshRunnable == null) {
+            autoRefreshRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (recyclerViewRanking != null && isResumed()) {
+                        Log.d("RankingFragment", "startAutoRefresh() - Atualizando ranking...");
+                        if (tabLayout.getSelectedTabPosition() == TAB_GROUP) {
+                            controller.updateGroupRanking();
+                        } else {
+                            controller.updateGlobalRanking();
+                        }
+                        // Agendar próxima atualização
+                        recyclerViewRanking.postDelayed(this, AUTO_REFRESH_INTERVAL);
+                    }
+                }
+            };
+        }
+        // Iniciar primeira atualização
+        recyclerViewRanking.postDelayed(autoRefreshRunnable, AUTO_REFRESH_INTERVAL);
+    }
+
+    /**
+     * Para atualização automática do ranking
+     */
+    private void stopAutoRefresh() {
+        if (autoRefreshRunnable != null && recyclerViewRanking != null) {
+            recyclerViewRanking.removeCallbacks(autoRefreshRunnable);
+        }
     }
 
     @Override
@@ -101,6 +145,15 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
         // Parar indicador de carregamento
         if (swipeRefreshLayout != null) {
             swipeRefreshLayout.setRefreshing(false);
+        }
+
+        // Log para verificar valores recebidos do servidor
+        if (rankingList != null && !rankingList.isEmpty()) {
+            Log.d("RankingFragment", "displayRanking() - Ranking recebido com " + rankingList.size() + " usuários:");
+            for (int i = 0; i < Math.min(rankingList.size(), 3); i++) {
+                User user = rankingList.get(i);
+                Log.d("RankingFragment", "  [" + (i + 1) + "] " + user.getName() + " - " + user.getWaterIntake() + "ml");
+            }
         }
 
         if (rankingList == null || rankingList.isEmpty()) {

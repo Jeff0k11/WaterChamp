@@ -54,7 +54,7 @@ public class ProfileFragment extends Fragment implements ProfileController.Profi
         btnSave = view.findViewById(R.id.btnSave);
         btnLogout = view.findViewById(R.id.btnLogout);
 
-        controller = new ProfileController(this);
+        controller = new ProfileController(this, getContext());
         controller.loadUserData();
 
         imgProfile.setOnClickListener(new View.OnClickListener() {

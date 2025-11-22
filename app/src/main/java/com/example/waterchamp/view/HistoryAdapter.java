@@ -56,6 +56,15 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.HistoryV
         return historyList.size();
     }
 
+    /**
+     * Atualiza a lista de histórico e notifica mudanças
+     * Mais eficiente que recriar o adapter
+     */
+    public void updateHistory(List<HistoryRecord> newHistoryList) {
+        this.historyList = newHistoryList;
+        notifyDataSetChanged();
+    }
+
     static class HistoryViewHolder extends RecyclerView.ViewHolder {
         TextView tvAction, tvTime, tvAmount;
 

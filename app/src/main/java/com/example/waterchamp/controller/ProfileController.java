@@ -1,15 +1,25 @@
 package com.example.waterchamp.controller;
 
+import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
+import com.example.waterchamp.data.local.PreferencesManager;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.model.UserDatabase;
 
 public class ProfileController {
     private ProfileView view;
+    private PreferencesManager preferencesManager;
 
+    public ProfileController(ProfileView view, Context context) {
+        this.view = view;
+        this.preferencesManager = new PreferencesManager(context);
+    }
+
+    // Constructor antigo para compatibilidade
     public ProfileController(ProfileView view) {
         this.view = view;
+        this.preferencesManager = null;
     }
 
     public void loadUserData() {
@@ -84,6 +94,7 @@ public class ProfileController {
                 return;
             }
 
+            // Atualizar em memória
             UserDatabase.currentUser.setName(newName);
             UserDatabase.currentUser.setDailyGoal(newGoal);
             UserDatabase.currentUser.setDefaultCupSize(newCup);
@@ -96,6 +107,17 @@ public class ProfileController {
             if (!TextUtils.isEmpty(newPass)) {
                 // Update password in the main credentials map
                 UserDatabase.usuariosCadastrados.put(UserDatabase.currentUser.getEmail(), newPass);
+            }
+
+            // IMPORTANTE: Persistir no PreferencesManager
+            if (preferencesManager != null) {
+                preferencesManager.setUserName(newName);
+                preferencesManager.setDailyGoal(newGoal);
+                preferencesManager.setDefaultCupSize(newCup);
+                preferencesManager.setNotificationsEnabled(notificationsEnabled);
+                if (selectedImageUri != null) {
+                    preferencesManager.setProfilePictureUri(selectedImageUri.toString());
+                }
             }
 
             view.showSaveSuccess();

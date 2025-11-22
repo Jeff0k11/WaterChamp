@@ -1,6 +1,7 @@
 package com.example.waterchamp.data.repository;
 
 import android.content.Context;
+import android.util.Log;
 import com.example.waterchamp.data.local.HistoryCache;
 import com.example.waterchamp.data.local.PreferencesManager;
 import com.example.waterchamp.data.remote.ConsumoService;
@@ -51,6 +52,9 @@ public class ConsumoRepository {
         // Atualizar estatística local
         prefsManager.addToTotalConsumed(amountMl);
 
+        int todayTotal = historyCache.getTodayTotal();
+        Log.d("ConsumoRepository", "addWater() - Total local após adicionar " + amountMl + "ml: " + todayTotal + "ml");
+
         // 2. Sincronizar com servidor (background, sem bloquear UI)
         syncTodayConsumption(null);
     }
@@ -100,6 +104,7 @@ public class ConsumoRepository {
     public void syncTodayConsumption(SyncCallback callback) {
         int userId = prefsManager.getUserId();
         if (userId == -1) {
+            Log.e("ConsumoRepository", "syncTodayConsumption() - Usuário não autenticado (userId: " + userId + ")");
             if (callback != null) {
                 callback.onError("Usuário não autenticado");
             }
@@ -109,22 +114,27 @@ public class ConsumoRepository {
         int todayTotal = historyCache.getTodayTotal();
         Date today = new Date();
 
+        Log.d("ConsumoRepository", "syncTodayConsumption() - Sincronizando: userId=" + userId + ", total=" + todayTotal + "ml, date=" + today);
+
         CoroutineHelper.runAsync(
             () -> consumoService.syncDailyConsumptionBlocking(userId, today, todayTotal),
             new CoroutineHelper.CoroutineCallback<Boolean>() {
                 @Override
                 public void onComplete(Boolean success, String error) {
                     if (error != null) {
+                        Log.e("ConsumoRepository", "syncTodayConsumption() - Erro: " + error);
                         if (callback != null) {
                             callback.onError("Erro: " + error);
                         }
                     } else if (Boolean.TRUE.equals(success)) {
+                        Log.d("ConsumoRepository", "syncTodayConsumption() - Sincronização bem-sucedida!");
                         // Atualizar timestamp de última sincronização
                         prefsManager.setLastSyncTimestamp(System.currentTimeMillis());
                         if (callback != null) {
                             callback.onSuccess();
                         }
                     } else {
+                        Log.e("ConsumoRepository", "syncTodayConsumption() - Falha ao sincronizar com servidor");
                         if (callback != null) {
                             callback.onError("Falha ao sincronizar com servidor");
                         }
