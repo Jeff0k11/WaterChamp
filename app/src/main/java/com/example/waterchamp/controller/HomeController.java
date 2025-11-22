@@ -52,7 +52,7 @@ public class HomeController {
                 int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
                 int newIntake = currentWaterIntake - removed.getAmount();
 
-                // Prevenir undo se resultaria em valor negativo
+                // Prevenir undo se resultaria em valor negativo (mas permitir 0)
                 if (newIntake < 0) {
                     view.showToast("Não é possível desfazer! Valor não pode ser negativo.");
                     return;

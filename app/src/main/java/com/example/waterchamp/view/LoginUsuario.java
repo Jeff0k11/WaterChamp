@@ -127,6 +127,6 @@ public class LoginUsuario extends AppCompatActivity implements LoginController.L
 
     @Override
     public void onLoginFailure(String message) {
-        Snackbar.make(findViewById(R.id.telaLogin), message, Snackbar.LENGTH_LONG).show();
+        Snackbar.make(findViewById(R.id.telaLogin), message, Snackbar.LENGTH_SHORT).show();
     }
 }

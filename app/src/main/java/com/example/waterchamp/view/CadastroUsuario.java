@@ -19,6 +19,7 @@ public class CadastroUsuario extends AppCompatActivity implements CadastroContro
     private EditText senha;
     private EditText confirmarSenha;
     private Button btnCriar;
+    private Button btnRetornar;
     private CadastroController controller;
 
     @Override
@@ -31,6 +32,7 @@ public class CadastroUsuario extends AppCompatActivity implements CadastroContro
         senha = findViewById(R.id.senha);
         confirmarSenha = findViewById(R.id.confirmarSenha);
         btnCriar = findViewById(R.id.btnCriar);
+        btnRetornar = findViewById(R.id.btnRetornar);
 
         controller = new CadastroController(this, this);
 
@@ -42,6 +44,13 @@ public class CadastroUsuario extends AppCompatActivity implements CadastroContro
                 String userSenha = senha.getText().toString().trim();
                 String userConfirmarSenha = confirmarSenha.getText().toString().trim();
                 controller.validarCadastro(nome, userEmail, userSenha, userConfirmarSenha);
+            }
+        });
+
+        btnRetornar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
             }
         });
     }

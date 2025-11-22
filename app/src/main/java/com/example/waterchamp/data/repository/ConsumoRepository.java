@@ -60,25 +60,41 @@ public class ConsumoRepository {
     }
 
     /**
-     * Desfazer última adição
+     * Desfazer última adição ou remoção
      */
     public HistoryRecord undoLastWater() {
         HistoryRecord removedRecord = historyCache.removeLastRecord();
 
-        if (removedRecord != null && "Adicionado".equals(removedRecord.getAction())) {
-            // Adicionar registro de remoção
-            HistoryRecord undoRecord = new HistoryRecord(
-                System.currentTimeMillis(),
-                removedRecord.getAmount(),
-                "Removido"
-            );
-            historyCache.addRecord(undoRecord);
+        if (removedRecord != null) {
+            if ("Adicionado".equals(removedRecord.getAction())) {
+                // Se foi adicionado, registrar a remoção
+                HistoryRecord undoRecord = new HistoryRecord(
+                    System.currentTimeMillis(),
+                    removedRecord.getAmount(),
+                    "Removido"
+                );
+                historyCache.addRecord(undoRecord);
 
-            // Atualizar estatística local
-            prefsManager.addToTotalConsumed(-removedRecord.getAmount());
+                // Atualizar estatística local
+                prefsManager.addToTotalConsumed(-removedRecord.getAmount());
 
-            // Sincronizar com servidor
-            syncTodayConsumption(null);
+                // Sincronizar com servidor
+                syncTodayConsumption(null);
+            } else if ("Removido".equals(removedRecord.getAction())) {
+                // Se foi removido, registrar a adição novamente (reverter o desfazimento)
+                HistoryRecord redoRecord = new HistoryRecord(
+                    System.currentTimeMillis(),
+                    removedRecord.getAmount(),
+                    "Adicionado"
+                );
+                historyCache.addRecord(redoRecord);
+
+                // Atualizar estatística local
+                prefsManager.addToTotalConsumed(removedRecord.getAmount());
+
+                // Sincronizar com servidor
+                syncTodayConsumption(null);
+            }
         }
 
         return removedRecord;
