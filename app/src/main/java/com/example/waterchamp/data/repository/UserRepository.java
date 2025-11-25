@@ -252,4 +252,97 @@ public class UserRepository {
     public PreferencesManager getPreferencesManager() {
         return prefsManager;
     }
+
+    /**
+     * Cria uma conta local (offline)
+     * Salva dados localmente sem conectar ao Supabase
+     */
+    public void createLocalAccount(String nome, String email, String passwordHash, String localId, AuthCallback callback) {
+        CoroutineHelper.runAsync(
+            () -> {
+                try {
+                    // Salvar dados localmente
+                    prefsManager.setIsLocalAccount(true);
+                    prefsManager.setLocalAccountId(localId);
+                    prefsManager.setUserName(nome);
+                    prefsManager.setUserEmail(email);
+                    prefsManager.setLocalPasswordHash(passwordHash);
+                    prefsManager.setPendingSync(true);
+                    prefsManager.setSyncedToRemote(false);
+
+                    // Gerar ID local temporário (negativo para distinguir de IDs remotos)
+                    int tempLocalId = Math.abs(localId.hashCode());
+                    prefsManager.setUserId(-(tempLocalId)); // ID negativo = conta local
+
+                    User user = new User(nome, email, 0);
+                    return new Pair<>(user, null);
+                } catch (Exception e) {
+                    return new Pair<>(null, "Erro ao criar conta local: " + e.getMessage());
+                }
+            },
+            new CoroutineHelper.CoroutineCallback<Pair<User, String>>() {
+                @Override
+                public void onComplete(Pair<User, String> result, String error) {
+                    if (error != null) {
+                        callback.onError(error);
+                    } else {
+                        User user = result.getFirst();
+                        String errorMsg = result.getSecond();
+                        if (errorMsg != null) {
+                            callback.onError(errorMsg);
+                        } else if (user != null) {
+                            callback.onSuccess(user);
+                        } else {
+                            callback.onError("Erro desconhecido ao criar conta local.");
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+    /**
+     * Sincroniza uma conta local com o Supabase
+     * Deve ser chamado quando internet estiver disponível
+     */
+    public void syncLocalAccount(AuthCallback callback) {
+        if (!prefsManager.isLocalAccount()) {
+            callback.onError("Nenhuma conta local para sincronizar.");
+            return;
+        }
+
+        CoroutineHelper.runAsync(
+            () -> {
+                try {
+                    String nome = prefsManager.getUserName();
+                    String email = prefsManager.getUserEmail();
+
+                    // Nota: A senha não pode ser recuperada do hash SHA-256
+                    // Em um app real, o usuário teria que reconfirmar a senha ou usar OAuth
+                    // Por enquanto, retornamos um erro pedindo para reconfirmar
+
+                    return new Pair<>(null, "Para sincronizar sua conta, você precisa reconfirmar sua senha no Supabase.");
+                } catch (Exception e) {
+                    return new Pair<>(null, "Erro na sincronização: " + e.getMessage());
+                }
+            },
+            new CoroutineHelper.CoroutineCallback<Pair<Integer, String>>() {
+                @Override
+                public void onComplete(Pair<Integer, String> result, String error) {
+                    if (error != null) {
+                        callback.onError(error);
+                    } else {
+                        String errorMsg = result.getSecond();
+                        if (errorMsg != null) {
+                            callback.onError(errorMsg);
+                        } else {
+                            prefsManager.setSyncedToRemote(true);
+                            prefsManager.clearLocalAccountData();
+                            callback.onSuccess(new User("", "", 0));
+                        }
+                    }
+                }
+            }
+        );
+    }
 }

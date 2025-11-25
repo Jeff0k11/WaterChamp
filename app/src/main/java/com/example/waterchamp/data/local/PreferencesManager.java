@@ -23,10 +23,18 @@ public class PreferencesManager {
     private static final String KEY_REMEMBER_LOGIN = "remember_login";
     private static final String KEY_SAVED_EMAIL = "saved_email";
     private static final String KEY_SAVED_PASSWORD = "saved_password";
-    
+
     // Keys Cache Ranking
     private static final String KEY_CACHED_RANKING_GLOBAL = "cached_ranking_global";
     private static final String KEY_CACHED_RANKING_GROUP = "cached_ranking_group";
+
+    // Keys para Contas Locais (Offline-First)
+    private static final String KEY_IS_LOCAL_ACCOUNT = "is_local_account";
+    private static final String KEY_LOCAL_ACCOUNT_ID = "local_account_id";
+    private static final String KEY_PENDING_SYNC = "pending_sync";
+    private static final String KEY_LOCAL_PASSWORD_HASH = "local_password_hash";
+    private static final String KEY_LAST_SYNC_ATTEMPT = "last_sync_attempt";
+    private static final String KEY_SYNCED_TO_REMOTE = "synced_to_remote";
 
     private final SharedPreferences prefs;
 
@@ -227,5 +235,87 @@ public class PreferencesManager {
 
     public void clearAll() {
         prefs.edit().clear().apply();
+    }
+
+    // ============ Local Accounts (Offline-First) ============
+
+    /**
+     * Marca se a conta é local (criada offline)
+     */
+    public void setIsLocalAccount(boolean isLocal) {
+        prefs.edit().putBoolean(KEY_IS_LOCAL_ACCOUNT, isLocal).apply();
+    }
+
+    public boolean isLocalAccount() {
+        return prefs.getBoolean(KEY_IS_LOCAL_ACCOUNT, false);
+    }
+
+    /**
+     * ID único local gerado para a conta offline (UUID)
+     */
+    public void setLocalAccountId(String localId) {
+        prefs.edit().putString(KEY_LOCAL_ACCOUNT_ID, localId).apply();
+    }
+
+    public String getLocalAccountId() {
+        return prefs.getString(KEY_LOCAL_ACCOUNT_ID, "");
+    }
+
+    /**
+     * Hash da senha para validação offline
+     * Nunca armazenar a senha original por segurança
+     */
+    public void setLocalPasswordHash(String hash) {
+        prefs.edit().putString(KEY_LOCAL_PASSWORD_HASH, hash).apply();
+    }
+
+    public String getLocalPasswordHash() {
+        return prefs.getString(KEY_LOCAL_PASSWORD_HASH, "");
+    }
+
+    /**
+     * Flag indicando se há dados pendentes de sincronização
+     */
+    public void setPendingSync(boolean pending) {
+        prefs.edit().putBoolean(KEY_PENDING_SYNC, pending).apply();
+    }
+
+    public boolean hasPendingSync() {
+        return prefs.getBoolean(KEY_PENDING_SYNC, false);
+    }
+
+    /**
+     * Timestamp da última tentativa de sincronização
+     */
+    public void setLastSyncAttempt(long timestamp) {
+        prefs.edit().putLong(KEY_LAST_SYNC_ATTEMPT, timestamp).apply();
+    }
+
+    public long getLastSyncAttempt() {
+        return prefs.getLong(KEY_LAST_SYNC_ATTEMPT, 0);
+    }
+
+    /**
+     * Flag indicando se a conta foi sincronizada com sucesso com o Supabase
+     */
+    public void setSyncedToRemote(boolean synced) {
+        prefs.edit().putBoolean(KEY_SYNCED_TO_REMOTE, synced).apply();
+    }
+
+    public boolean isSyncedToRemote() {
+        return prefs.getBoolean(KEY_SYNCED_TO_REMOTE, false);
+    }
+
+    /**
+     * Limpar dados de conta local após sincronização bem-sucedida
+     */
+    public void clearLocalAccountData() {
+        prefs.edit()
+            .remove(KEY_IS_LOCAL_ACCOUNT)
+            .remove(KEY_LOCAL_ACCOUNT_ID)
+            .remove(KEY_LOCAL_PASSWORD_HASH)
+            .remove(KEY_PENDING_SYNC)
+            .remove(KEY_SYNCED_TO_REMOTE)
+            .apply();
     }
 }
