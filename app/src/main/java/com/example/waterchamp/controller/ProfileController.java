@@ -132,7 +132,19 @@ public class ProfileController {
     }
 
     public void logout() {
+        // Limpar dados de sessão ativa
         UserDatabase.currentUser = null;
+
+        // IMPORTANTE: Limpar PreferencesManager (sessão de login)
+        if (preferencesManager != null) {
+            preferencesManager.clearUserData();
+            // Também limpar dados de conta local se existir
+            preferencesManager.clearLocalAccountData();
+            // Limpar credenciais salvas
+            preferencesManager.clearSavedCredentials();
+        }
+
+        // Navegar para login com clear back stack
         view.navigateToLogin();
     }
 
