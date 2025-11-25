@@ -48,19 +48,32 @@ public class GrupoRepository {
      */
     public void getUserGroups(GruposCallback callback) {
         int userId = prefsManager.getUserId();
-        if (userId == -1) {
-            callback.onError("Usuário não autenticado");
+        android.util.Log.d("GrupoRepository", "getUserGroups: userId=" + userId);
+
+        if (userId <= 0) {
+            // Se ID <= 0, significa não autenticado ou conta local
+            // Retornar lista vazia silenciosamente
+            android.util.Log.d("GrupoRepository", "getUserGroups: userId inválido (<=0), retornando lista vazia");
+            callback.onSuccess(new ArrayList<>());
             return;
         }
 
         CoroutineHelper.runAsync(
-            () -> grupoService.getUserGroupsBlocking(userId),
+            () -> {
+                android.util.Log.d("GrupoRepository", "getUserGroups: Buscando grupos para userId=" + userId);
+                List<GrupoService.GrupoData> result = grupoService.getUserGroupsBlocking(userId);
+                android.util.Log.d("GrupoRepository", "getUserGroups: Resultado=" + (result != null ? result.size() : "null") + " grupos");
+                return result;
+            },
             new CoroutineHelper.CoroutineCallback<List<GrupoService.GrupoData>>() {
                 @Override
                 public void onComplete(List<GrupoService.GrupoData> grupos, String error) {
+                    android.util.Log.d("GrupoRepository", "getUserGroups: onComplete - error=" + error + ", grupos=" + (grupos != null ? grupos.size() : "null"));
+
                     if (error != null) {
                         callback.onError("Erro: " + error);
                     } else if (grupos != null && !grupos.isEmpty()) {
+                        android.util.Log.d("GrupoRepository", "getUserGroups: Convertendo " + grupos.size() + " grupos");
                         // Converter de GrupoData para Group e buscar contagem real de membros
                         List<Group> groupList = new ArrayList<>();
                         for (GrupoService.GrupoData grupo : grupos) {
@@ -77,8 +90,10 @@ public class GrupoRepository {
                             );
                             groupList.add(group);
                         }
+                        android.util.Log.d("GrupoRepository", "getUserGroups: Sucesso - retornando " + groupList.size() + " grupos");
                         callback.onSuccess(groupList);
                     } else {
+                        android.util.Log.d("GrupoRepository", "getUserGroups: Nenhum grupo encontrado");
                         callback.onSuccess(new ArrayList<>()); // Lista vazia
                     }
                 }
@@ -195,8 +210,8 @@ public class GrupoRepository {
      */
     public void joinGroup(int groupId, OperationCallback callback) {
         int userId = prefsManager.getUserId();
-        if (userId == -1) {
-            callback.onError("Usuário não autenticado");
+        if (userId <= 0) {
+            callback.onError("Você precisa estar registrado no servidor para entrar em um grupo. Faça login com uma conta sincronizada.");
             return;
         }
 

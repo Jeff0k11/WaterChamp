@@ -151,20 +151,31 @@ public class RankingRepository {
                 int groupId = groups.get(0).getId();
 
                 // 2. Buscar da API (Network)
+                Log.d("RankingRepository", "Ranking Grupo: Buscando ranking para grupo " + groupId);
                 CoroutineHelper.runAsync(
-                    () -> rankingService.getGroupDailyRankingBlocking(groupId),
+                    () -> {
+                        Log.d("RankingRepository", "Ranking Grupo: Chamando getGroupDailyRankingBlocking para grupo " + groupId);
+                        List<RankingService.RankingEntry> result = rankingService.getGroupDailyRankingBlocking(groupId);
+                        Log.d("RankingRepository", "Ranking Grupo: Resultado=" + (result != null ? result.size() : "null") + " entries");
+                        return result;
+                    },
                     (entries, error) -> {
+                        Log.d("RankingRepository", "Ranking Grupo: onComplete - error=" + error + ", entries=" + (entries != null ? entries.size() : "null"));
+
                         if (error != null) {
                             Log.e("RankingRepository", "Ranking Grupo: Erro na API: " + error);
                             // Erro silencioso se já mostramos o cache
-                        } else if (entries != null) {
+                        } else if (entries != null && !entries.isEmpty()) {
                             List<User> liveRanking = convertEntriesToUsers(entries);
-                            
+
                             // 3. Salvar no Cache
                             saveRankingToCache(liveRanking, false); // false = grupo
-                            
+
                             Log.d("RankingRepository", "Ranking Grupo: Atualizado da API (" + liveRanking.size() + " itens)");
                             callback.onSuccess(liveRanking);
+                        } else {
+                            Log.d("RankingRepository", "Ranking Grupo: Nenhum dado retornado, mostrando lista vazia");
+                            callback.onSuccess(new ArrayList<>());
                         }
                     }
                 );

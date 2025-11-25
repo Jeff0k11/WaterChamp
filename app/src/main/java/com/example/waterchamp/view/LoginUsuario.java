@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.waterchamp.R;
@@ -40,6 +41,12 @@ public class LoginUsuario extends AppCompatActivity implements LoginController.L
 
         controller = new LoginController(this, this);
         preferencesManager = new PreferencesManager(this);
+
+        // NOVO: Tentar auto-login (pula tela de login se já estava logado)
+        if (controller.tryAutoLogin()) {
+            // Auto-login bem-sucedido, activity será encerrada em onLoginSuccess
+            return;
+        }
 
         // Carregar credenciais salvas se existirem
         loadSavedCredentials();
@@ -128,5 +135,25 @@ public class LoginUsuario extends AppCompatActivity implements LoginController.L
     @Override
     public void onLoginFailure(String message) {
         Snackbar.make(findViewById(R.id.telaLogin), message, Snackbar.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void showLoginOfflineOption(String message) {
+        new AlertDialog.Builder(this)
+            .setTitle("Sem Internet")
+            .setMessage(message + "\n\nTentar login offline?")
+            .setPositiveButton("Sim", (dialog, which) -> {
+                // Chamar validateLogin novamente (vai tentar localmente)
+                String email = loginUsuario.getText().toString().trim();
+                String senha = senhaUsuario.getText().toString().trim();
+                controller.validateLogin(email, senha);
+            })
+            .setNegativeButton("Não", null)
+            .show();
+    }
+
+    @Override
+    public void showLoginOfflineMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 }

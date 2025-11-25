@@ -31,6 +31,7 @@ public class RankingController {
                 UserDatabase.usersList.clear();
                 UserDatabase.usersList.addAll(users);
 
+                
                 // Ensure current user is in the list
                 if (UserDatabase.currentUser != null) {
                     boolean found = false;

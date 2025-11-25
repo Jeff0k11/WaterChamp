@@ -26,7 +26,14 @@ class GrupoService {
      */
     suspend fun getUserGroups(usuarioId: Int): List<GrupoData> = withContext(Dispatchers.IO) {
         try {
-            SupabaseClient.client
+            // Se userId é negativo (conta local), retornar vazio pois contas locais não têm grupos no Supabase
+            if (usuarioId < 0) {
+                android.util.Log.d("GrupoService", "getUserGroups: userId negativo ($usuarioId), retornando lista vazia")
+                return@withContext emptyList()
+            }
+
+            android.util.Log.d("GrupoService", "getUserGroups: Buscando membros_grupo para usuario_id=$usuarioId")
+            val membros = SupabaseClient.client
                 .from("membros_grupo")
                 .select {
                     filter {
@@ -34,10 +41,18 @@ class GrupoService {
                     }
                 }
                 .decodeList<MembrosGrupoData>()
-                .mapNotNull { membro ->
-                    getGroupById(membro.grupo_id)
-                }
+
+            android.util.Log.d("GrupoService", "getUserGroups: Encontrado ${membros.size} membros para usuario $usuarioId")
+
+            val grupos = membros.mapNotNull { membro ->
+                android.util.Log.d("GrupoService", "getUserGroups: Buscando grupo ${membro.grupo_id}")
+                getGroupById(membro.grupo_id)
+            }
+
+            android.util.Log.d("GrupoService", "getUserGroups: Retornando ${grupos.size} grupos")
+            grupos
         } catch (e: Exception) {
+            android.util.Log.e("GrupoService", "getUserGroups: Erro - ${e.message}", e)
             e.printStackTrace()
             emptyList()
         }

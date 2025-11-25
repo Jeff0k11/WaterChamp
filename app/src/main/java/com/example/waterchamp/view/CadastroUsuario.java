@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.waterchamp.R;
@@ -81,5 +82,27 @@ public class CadastroUsuario extends AppCompatActivity implements CadastroContro
         Intent intent = new Intent(CadastroUsuario.this, LoginUsuario.class);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    public void showRegistroOfflineOption(String message) {
+        new AlertDialog.Builder(this)
+            .setTitle("Sem Internet")
+            .setMessage(message + "\n\nCriar conta offline?")
+            .setPositiveButton("Sim", (dialog, which) -> {
+                // Chamar validarCadastro novamente (vai criar localmente)
+                String nome = nomeCompleto.getText().toString().trim();
+                String userEmail = email.getText().toString().trim();
+                String userSenha = senha.getText().toString().trim();
+                String userConfirmarSenha = confirmarSenha.getText().toString().trim();
+                controller.validarCadastro(nome, userEmail, userSenha, userConfirmarSenha);
+            })
+            .setNegativeButton("Não", null)
+            .show();
+    }
+
+    @Override
+    public void showOfflineRegistroMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 }
