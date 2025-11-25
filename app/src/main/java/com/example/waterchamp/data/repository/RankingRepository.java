@@ -2,13 +2,14 @@ package com.example.waterchamp.data.repository;
 
 import android.content.Context;
 import android.util.Log;
-import com.example.waterchamp.data.local.HistoryCache;
 import com.example.waterchamp.data.local.PreferencesManager;
 import com.example.waterchamp.data.remote.RankingService;
 import com.example.waterchamp.model.Group;
 import com.example.waterchamp.model.User;
-import com.example.waterchamp.model.UserDatabase;
 import com.example.waterchamp.utils.CoroutineHelper;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,18 +17,17 @@ import java.util.List;
 
 /**
  * Repository para gerenciar operações de ranking
+ * Implementa estratégia Offline-First: Carrega do cache -> Atualiza da API -> Salva no cache
  */
 public class RankingRepository {
     private final RankingService rankingService;
     private final PreferencesManager prefsManager;
     private final GrupoRepository grupoRepository;
-    private final HistoryCache historyCache;
 
     public RankingRepository(Context context) {
         this.rankingService = new RankingService();
         this.prefsManager = new PreferencesManager(context);
         this.grupoRepository = new GrupoRepository(context);
-        this.historyCache = new HistoryCache(context);
     }
 
     /**
@@ -43,263 +43,217 @@ public class RankingRepository {
         void onError(String message);
     }
 
+    // ================== RANKING DIÁRIO ==================
+
     /**
-     * Buscar ranking diário
+     * Buscar ranking diário (de hoje)
+     * 1. Retorna dados do cache imediatamente (se houver)
+     * 2. Busca dados atualizados da API em background
+     * 3. Salva novos dados no cache e atualiza a UI novamente
      */
-    public void getDailyRanking(int limit, RankingCallback callback) {
+    public void getDailyRanking(RankingCallback callback) {
+        // 1. Carregar do Cache
+        List<User> cachedRanking = loadRankingFromCache(prefsManager.getCachedRankingGlobal());
+        if (!cachedRanking.isEmpty()) {
+            Log.d("RankingRepository", "Ranking Diário: Carregado do cache (" + cachedRanking.size() + " itens)");
+            callback.onSuccess(cachedRanking);
+        }
+
+        // 2. Buscar da API (Network)
         CoroutineHelper.runAsync(
-            () -> rankingService.getDailyRankingBlocking(limit),
+            () -> rankingService.getDailyRankingBlocking(100),
             (entries, error) -> {
                 if (error != null) {
-                    callback.onError("Erro ao buscar ranking: " + error);
-                } else if (entries != null) {
-                    // Converter para lista de Users
-                    List<User> users = new ArrayList<>();
-                    for (RankingService.RankingEntry entry : entries) {
-                        User user = new User(
-                            entry.getNome(),
-                            "",  // Email não é necessário para ranking
-                            entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0
-                        );
-                        user.setRank((int) entry.getPosicao());
-                        users.add(user);
+                    Log.e("RankingRepository", "Ranking Diário: Erro na API: " + error);
+                    if (cachedRanking.isEmpty()) {
+                        callback.onError("Falha ao carregar ranking. Verifique sua conexão.");
                     }
+                } else if (entries != null) {
+                    // Converter e processar
+                    List<User> liveRanking = convertEntriesToUsers(entries);
 
-                    // Ordenar por posição
-                    Collections.sort(users, (u1, u2) -> Integer.compare(u1.getRank(), u2.getRank()));
+                    // 3. Salvar no Cache
+                    saveRankingToCache(liveRanking, true); // true = global
 
-                    callback.onSuccess(users);
-                } else {
-                    callback.onError("Nenhum resultado encontrado");
+                    Log.d("RankingRepository", "Ranking Diário: Atualizado da API (" + liveRanking.size() + " itens)");
+                    callback.onSuccess(liveRanking);
                 }
             }
         );
     }
 
+    // ================== RANKING GLOBAL ==================
+
     /**
-     * Buscar ranking global (últimos 30 dias)
-     * Usa cache local para o consumo do dia do usuário atual
+     * Buscar ranking global
+     * 1. Retorna dados do cache imediatamente (se houver)
+     * 2. Busca dados atualizados da API em background
+     * 3. Salva novos dados no cache e atualiza a UI novamente
      */
     public void getGlobalRanking(int limit, RankingCallback callback) {
-        Log.d("RankingRepository", "getGlobalRanking() - Buscando ranking global com limite: " + limit);
+        // 1. Carregar do Cache
+        List<User> cachedRanking = loadRankingFromCache(prefsManager.getCachedRankingGlobal());
+        if (!cachedRanking.isEmpty()) {
+            Log.d("RankingRepository", "Ranking Global: Carregado do cache (" + cachedRanking.size() + " itens)");
+            callback.onSuccess(cachedRanking);
+        }
 
+        // 2. Buscar da API (Network)
         CoroutineHelper.runAsync(
             () -> rankingService.getGlobalRankingBlocking(limit),
             (entries, error) -> {
                 if (error != null) {
-                    Log.e("RankingRepository", "getGlobalRanking() - Erro: " + error);
-                    callback.onError("Erro ao buscar ranking global: " + error);
-                } else if (entries != null) {
-                    Log.d("RankingRepository", "getGlobalRanking() - Recebido " + entries.size() + " entries do servidor");
-
-                    // Obter consumo local do usuário atual do cache
-                    int localConsumption = historyCache.getTodayTotal();
-
-                    // Converter para lista de Users
-                    List<User> users = new ArrayList<>();
-                    for (RankingService.RankingEntry entry : entries) {
-                        long total30dias;
-
-                        // Se for o usuário atual, usar cache local como base para hoje
-                        if (UserDatabase.currentUser != null &&
-                            entry.getNome().equalsIgnoreCase(UserDatabase.currentUser.getName())) {
-                            // Usar o total_30_dias do servidor, mas atualizar hoje com cache local
-                            long serverTotal = entry.getTotal_30_dias() != null ? entry.getTotal_30_dias() : 0;
-                            // Atualizar o valor de hoje no total 30 dias
-                            total30dias = serverTotal - historyCache.getTodayTotal() + localConsumption;
-                            Log.d("RankingRepository", "  Usuário atual (" + entry.getNome() + ") - usando cache local para hoje: " + localConsumption + "ml, total 30 dias: " + total30dias + "ml");
-                        } else {
-                            total30dias = entry.getTotal_30_dias() != null ? entry.getTotal_30_dias() : 0;
-                            Log.d("RankingRepository", "  Outro usuário (" + entry.getNome() + ") - usando servidor: " + total30dias + "ml");
-                        }
-
-                        User user = new User(
-                            entry.getNome(),
-                            "",
-                            (int) total30dias  // Usar o total 30 dias como waterIntake para exibição
-                        );
-                        user.setRank((int) entry.getPosicao());
-                        users.add(user);
+                    Log.e("RankingRepository", "Ranking Global: Erro na API: " + error);
+                    if (cachedRanking.isEmpty()) {
+                        callback.onError("Falha ao carregar ranking. Verifique sua conexão.");
                     }
-
-                    // Ordenar por posição
-                    Collections.sort(users, (u1, u2) -> Integer.compare(u1.getRank(), u2.getRank()));
-
-                    callback.onSuccess(users);
-                } else {
-                    Log.e("RankingRepository", "getGlobalRanking() - Nenhum resultado encontrado");
-                    callback.onError("Nenhum resultado encontrado");
-                }
-            }
-        );
-    }
-
-    /**
-     * Buscar posição do usuário atual no ranking diário
-     */
-    public void getCurrentUserDailyPosition(PositionCallback callback) {
-        int userId = prefsManager.getUserId();
-        if (userId == -1) {
-            callback.onError("Usuário não autenticado");
-            return;
-        }
-
-        CoroutineHelper.runAsync(
-            () -> rankingService.getUserDailyPositionBlocking(userId),
-            (position, error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (position != null) {
-                    callback.onSuccess(position);
-                } else {
-                    callback.onError("Posição não encontrada");
-                }
-            }
-        );
-    }
-
-    /**
-     * Buscar posição do usuário atual no ranking global
-     */
-    public void getCurrentUserGlobalPosition(PositionCallback callback) {
-        int userId = prefsManager.getUserId();
-        if (userId == -1) {
-            callback.onError("Usuário não autenticado");
-            return;
-        }
-
-        CoroutineHelper.runAsync(
-            () -> rankingService.getUserGlobalPositionBlocking(userId),
-            (position, error) -> {
-                if (error != null) {
-                    callback.onError("Erro: " + error);
-                } else if (position != null) {
-                    callback.onSuccess(position);
-                } else {
-                    callback.onError("Posição não encontrada");
-                }
-            }
-        );
-    }
-
-    /**
-     * Buscar ranking de um grupo específico
-     */
-    public void getGroupDailyRanking(int groupId, RankingCallback callback) {
-        Log.d("RankingRepository", "getGroupDailyRanking() - Buscando ranking do grupo: " + groupId);
-
-        CoroutineHelper.runAsync(
-            () -> rankingService.getGroupDailyRankingBlocking(groupId),
-            (entries, error) -> {
-                if (error != null) {
-                    Log.e("RankingRepository", "getGroupDailyRanking() - Erro: " + error);
-                    callback.onError("Erro ao buscar ranking do grupo: " + error);
                 } else if (entries != null) {
-                    Log.d("RankingRepository", "getGroupDailyRanking() - Recebido " + entries.size() + " entries do servidor");
-                    // Converter para lista de Users
-                    List<User> users = new ArrayList<>();
-                    for (RankingService.RankingEntry entry : entries) {
-                        int consumo = entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0;
-                        User user = new User(
-                            entry.getNome(),
-                            "",
-                            consumo
-                        );
-                        user.setRank((int) entry.getPosicao());
-                        users.add(user);
-                        Log.d("RankingRepository", "  [" + entry.getPosicao() + "] " + entry.getNome() + " - " + consumo + "ml (consumo_hoje=" + entry.getConsumo_hoje() + ")");
-                    }
+                    // Converter e processar
+                    List<User> liveRanking = convertEntriesToUsers(entries);
+                    
+                    // 3. Salvar no Cache
+                    saveRankingToCache(liveRanking, true); // true = global
 
-                    callback.onSuccess(users);
-                } else {
-                    Log.e("RankingRepository", "getGroupDailyRanking() - Nenhum resultado encontrado");
-                    callback.onError("Nenhum resultado encontrado");
+                    Log.d("RankingRepository", "Ranking Global: Atualizado da API (" + liveRanking.size() + " itens)");
+                    callback.onSuccess(liveRanking);
                 }
             }
         );
     }
 
+    // ================== RANKING DO GRUPO ==================
+
     /**
-     * Buscar ranking do grupo do usuário logado
-     * Obtém o grupo do usuário e busca o ranking desse grupo
-     * Usa cache local do consumo do dia para o usuário atual
+     * Buscar ranking do grupo do usuário
+     * Segue a mesma estratégia Offline-First
      */
     public void getUserGroupRanking(RankingCallback callback) {
-        // Buscar grupos do usuário
+        // 1. Carregar do Cache
+        List<User> cachedRanking = loadRankingFromCache(prefsManager.getCachedRankingGroup());
+        if (!cachedRanking.isEmpty()) {
+            Log.d("RankingRepository", "Ranking Grupo: Carregado do cache (" + cachedRanking.size() + " itens)");
+            callback.onSuccess(cachedRanking);
+        }
+
+        // Buscar ID do grupo primeiro (necessário para a API)
+        // Nota: Isso pode falhar offline se o usuário nunca logou/baixou grupos.
+        // Assumindo que o GrupoRepository tem seu próprio cache ou que vamos tentar mesmo assim.
         grupoRepository.getUserGroups(new GrupoRepository.GruposCallback() {
             @Override
             public void onSuccess(List<Group> groups) {
                 if (groups == null || groups.isEmpty()) {
-                    // Usuário não está em nenhum grupo
+                    // Sem grupo, limpa cache de grupo
+                    prefsManager.setCachedRankingGroup("[]");
                     callback.onSuccess(new ArrayList<>());
-                } else {
-                    // Pegar o primeiro grupo (máximo 1 grupo por usuário)
-                    int groupId = groups.get(0).getId();
-                    getGroupDailyRankingWithLocalCache(groupId, callback);
+                    return;
                 }
+
+                int groupId = groups.get(0).getId();
+
+                // 2. Buscar da API (Network)
+                CoroutineHelper.runAsync(
+                    () -> rankingService.getGroupDailyRankingBlocking(groupId),
+                    (entries, error) -> {
+                        if (error != null) {
+                            Log.e("RankingRepository", "Ranking Grupo: Erro na API: " + error);
+                            // Erro silencioso se já mostramos o cache
+                        } else if (entries != null) {
+                            List<User> liveRanking = convertEntriesToUsers(entries);
+                            
+                            // 3. Salvar no Cache
+                            saveRankingToCache(liveRanking, false); // false = grupo
+                            
+                            Log.d("RankingRepository", "Ranking Grupo: Atualizado da API (" + liveRanking.size() + " itens)");
+                            callback.onSuccess(liveRanking);
+                        }
+                    }
+                );
             }
 
             @Override
             public void onError(String message) {
-                // Se houver erro ao buscar grupos, retornar lista vazia
-                callback.onSuccess(new ArrayList<>());
+                // Se falhar ao buscar grupos e não tiver cache, erro.
+                if (cachedRanking.isEmpty()) {
+                    callback.onError("Não foi possível carregar seu grupo.");
+                }
             }
         });
     }
 
+    // ================== MÉTODOS AUXILIARES ==================
+
     /**
-     * Buscar ranking do grupo, mas usar cache local para o usuário atual
-     * Substitui o consumo_hoje do servidor pelo valor do cache local
+     * Converte entradas do serviço para objetos User
      */
-    private void getGroupDailyRankingWithLocalCache(int groupId, RankingCallback callback) {
-        Log.d("RankingRepository", "getGroupDailyRankingWithLocalCache() - Buscando ranking do grupo: " + groupId);
+    private List<User> convertEntriesToUsers(List<RankingService.RankingEntry> entries) {
+        List<User> users = new ArrayList<>();
+        for (RankingService.RankingEntry entry : entries) {
+            // Usa consumo_hoje para ambos por enquanto (simplificação pedida)
+            int consumo = entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0;
+            
+            User user = new User(entry.getNome(), "", consumo);
+            // Se o serviço já retornou posição, usa. Se não, será reordenado depois se necessário.
+            user.setRank((int) entry.getPosicao());
+            users.add(user);
+        }
+        // Garante ordenação
+        Collections.sort(users, (u1, u2) -> Integer.compare(u2.getWaterIntake(), u1.getWaterIntake()));
+        
+        // Recalcula ranks baseados na lista ordenada (1..N)
+        for (int i = 0; i < users.size(); i++) {
+            users.get(i).setRank(i + 1);
+        }
+        
+        return users;
+    }
 
-        CoroutineHelper.runAsync(
-            () -> rankingService.getGroupDailyRankingBlocking(groupId),
-            (entries, error) -> {
-                if (error != null) {
-                    Log.e("RankingRepository", "getGroupDailyRankingWithLocalCache() - Erro: " + error);
-                    callback.onError("Erro ao buscar ranking do grupo: " + error);
-                } else if (entries != null) {
-                    Log.d("RankingRepository", "getGroupDailyRankingWithLocalCache() - Recebido " + entries.size() + " entries do servidor");
-
-                    // Obter consumo local do usuário atual do cache
-                    int localConsumption = historyCache.getTodayTotal();
-
-                    // Converter para lista de Users
-                    List<User> users = new ArrayList<>();
-                    for (RankingService.RankingEntry entry : entries) {
-                        int consumo;
-
-                        // Se for o usuário atual, usar o cache local
-                        if (UserDatabase.currentUser != null &&
-                            entry.getNome().equalsIgnoreCase(UserDatabase.currentUser.getName())) {
-                            consumo = localConsumption;
-                            Log.d("RankingRepository", "  Usuário atual (" + entry.getNome() + ") - usando cache local: " + consumo + "ml");
-                        } else {
-                            consumo = entry.getConsumo_hoje() != null ? entry.getConsumo_hoje() : 0;
-                            Log.d("RankingRepository", "  Outro usuário (" + entry.getNome() + ") - usando servidor: " + consumo + "ml");
-                        }
-
-                        User user = new User(entry.getNome(), "", consumo);
-                        user.setRank((int) entry.getPosicao());
-                        users.add(user);
-                    }
-
-                    // Reordenar por consumo (maior primeiro)
-                    Collections.sort(users, (u1, u2) -> Integer.compare(u2.getWaterIntake(), u1.getWaterIntake()));
-
-                    // Atribuir novas posições baseado na ordem
-                    for (int i = 0; i < users.size(); i++) {
-                        users.get(i).setRank(i + 1);
-                    }
-
-                    callback.onSuccess(users);
-                } else {
-                    Log.e("RankingRepository", "getGroupDailyRankingWithLocalCache() - Nenhum resultado encontrado");
-                    callback.onError("Nenhum resultado encontrado");
-                }
+    /**
+     * Salva lista de usuários como JSON no SharedPreferences
+     */
+    private void saveRankingToCache(List<User> users, boolean isGlobal) {
+        try {
+            JSONArray jsonArray = new JSONArray();
+            for (User user : users) {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("name", user.getName());
+                jsonObject.put("waterIntake", user.getWaterIntake());
+                jsonObject.put("rank", user.getRank());
+                jsonArray.put(jsonObject);
             }
-        );
+            
+            String jsonString = jsonArray.toString();
+            if (isGlobal) {
+                prefsManager.setCachedRankingGlobal(jsonString);
+            } else {
+                prefsManager.setCachedRankingGroup(jsonString);
+            }
+        } catch (Exception e) {
+            Log.e("RankingRepository", "Erro ao salvar cache: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Carrega lista de usuários do JSON do SharedPreferences
+     */
+    private List<User> loadRankingFromCache(String jsonString) {
+        List<User> users = new ArrayList<>();
+        try {
+            if (jsonString == null || jsonString.isEmpty()) return users;
+
+            JSONArray jsonArray = new JSONArray(jsonString);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject obj = jsonArray.getJSONObject(i);
+                User user = new User(
+                    obj.getString("name"),
+                    "",
+                    obj.getInt("waterIntake")
+                );
+                user.setRank(obj.getInt("rank"));
+                users.add(user);
+            }
+        } catch (Exception e) {
+            Log.e("RankingRepository", "Erro ao ler cache: " + e.getMessage());
+        }
+        return users;
     }
 }

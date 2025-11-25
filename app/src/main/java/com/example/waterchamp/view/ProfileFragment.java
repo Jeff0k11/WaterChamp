@@ -187,6 +187,12 @@ public class ProfileFragment extends Fragment implements ProfileController.Profi
     }
 
     @Override
+    public void onSaveComplete() {
+        // Dados já foram salvos offline de forma síncrona (sem delay)
+        // Pronto para navegar ou fazer qualquer ação
+    }
+
+    @Override
     public void navigateToLogin() {
         Intent intent = new Intent(getActivity(), LoginUsuario.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); // Clear back stack

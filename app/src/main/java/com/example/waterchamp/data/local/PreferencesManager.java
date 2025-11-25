@@ -23,6 +23,10 @@ public class PreferencesManager {
     private static final String KEY_REMEMBER_LOGIN = "remember_login";
     private static final String KEY_SAVED_EMAIL = "saved_email";
     private static final String KEY_SAVED_PASSWORD = "saved_password";
+    
+    // Keys Cache Ranking
+    private static final String KEY_CACHED_RANKING_GLOBAL = "cached_ranking_global";
+    private static final String KEY_CACHED_RANKING_GROUP = "cached_ranking_group";
 
     private final SharedPreferences prefs;
 
@@ -62,12 +66,20 @@ public class PreferencesManager {
         prefs.edit().putInt(KEY_DAILY_GOAL, goalInMl).apply();
     }
 
+    public void setDailyGoalSync(int goalInMl) {
+        prefs.edit().putInt(KEY_DAILY_GOAL, goalInMl).commit();
+    }
+
     public int getDailyGoal() {
         return prefs.getInt(KEY_DAILY_GOAL, 2000); // Default: 2000ml
     }
 
     public void setDefaultCupSize(int sizeInMl) {
         prefs.edit().putInt(KEY_DEFAULT_CUP_SIZE, sizeInMl).apply();
+    }
+
+    public void setDefaultCupSizeSync(int sizeInMl) {
+        prefs.edit().putInt(KEY_DEFAULT_CUP_SIZE, sizeInMl).commit();
     }
 
     public int getDefaultCupSize() {
@@ -78,12 +90,20 @@ public class PreferencesManager {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply();
     }
 
+    public void setNotificationsEnabledSync(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).commit();
+    }
+
     public boolean isNotificationsEnabled() {
         return prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true); // Default: true
     }
 
     public void setProfilePictureUri(String uri) {
         prefs.edit().putString(KEY_PROFILE_PICTURE_URI, uri).apply();
+    }
+
+    public void setProfilePictureUriSync(String uri) {
+        prefs.edit().putString(KEY_PROFILE_PICTURE_URI, uri).commit();
     }
 
     public String getProfilePictureUri() {
@@ -113,6 +133,24 @@ public class PreferencesManager {
 
     public long getLastSyncTimestamp() {
         return prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0);
+    }
+    
+    // ============ Ranking Cache ============
+    
+    public void setCachedRankingGlobal(String json) {
+        prefs.edit().putString(KEY_CACHED_RANKING_GLOBAL, json).apply();
+    }
+    
+    public String getCachedRankingGlobal() {
+        return prefs.getString(KEY_CACHED_RANKING_GLOBAL, "[]");
+    }
+    
+    public void setCachedRankingGroup(String json) {
+        prefs.edit().putString(KEY_CACHED_RANKING_GROUP, json).apply();
+    }
+    
+    public String getCachedRankingGroup() {
+        return prefs.getString(KEY_CACHED_RANKING_GROUP, "[]");
     }
 
     // ============ Remember Login ============
@@ -149,6 +187,25 @@ public class PreferencesManager {
             .apply();
     }
 
+    // ============ Bulk Operations ============
+
+    /**
+     * Salva múltiplas configurações de usuário de forma síncrona (offline-first)
+     * Garante que todos os dados sejam persistidos imediatamente no disco
+     */
+    public void saveUserSettingsSync(String name, int dailyGoal, int cupSize, boolean notificationsEnabled, String profilePictureUri) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(KEY_USER_NAME, name);
+        editor.putInt(KEY_DAILY_GOAL, dailyGoal);
+        editor.putInt(KEY_DEFAULT_CUP_SIZE, cupSize);
+        editor.putBoolean(KEY_NOTIFICATIONS_ENABLED, notificationsEnabled);
+        if (profilePictureUri != null) {
+            editor.putString(KEY_PROFILE_PICTURE_URI, profilePictureUri);
+        }
+        // Usar commit() para garantir salvamento síncrono (bloqueia até salvar)
+        editor.commit();
+    }
+
     // ============ Session Management ============
 
     public boolean isLoggedIn() {
@@ -163,6 +220,8 @@ public class PreferencesManager {
             .remove(KEY_PROFILE_PICTURE_URI)
             .remove(KEY_TOTAL_CONSUMED_ALL_TIME)
             .remove(KEY_LAST_SYNC_TIMESTAMP)
+            .remove(KEY_CACHED_RANKING_GLOBAL) // Limpa ranking ao deslogar
+            .remove(KEY_CACHED_RANKING_GROUP)
             .apply();
     }
 

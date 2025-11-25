@@ -4,8 +4,10 @@ import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 import com.example.waterchamp.data.local.PreferencesManager;
+import com.example.waterchamp.event.ProfileUpdateEvent;
 import com.example.waterchamp.model.User;
 import com.example.waterchamp.model.UserDatabase;
+import org.greenrobot.eventbus.EventBus;
 
 public class ProfileController {
     private ProfileView view;
@@ -109,18 +111,23 @@ public class ProfileController {
                 UserDatabase.usuariosCadastrados.put(UserDatabase.currentUser.getEmail(), newPass);
             }
 
-            // IMPORTANTE: Persistir no PreferencesManager
+            // IMPORTANTE: Persistir OFFLINE FIRST - salvar localmente de forma síncrona
             if (preferencesManager != null) {
-                preferencesManager.setUserName(newName);
-                preferencesManager.setDailyGoal(newGoal);
-                preferencesManager.setDefaultCupSize(newCup);
-                preferencesManager.setNotificationsEnabled(notificationsEnabled);
-                if (selectedImageUri != null) {
-                    preferencesManager.setProfilePictureUri(selectedImageUri.toString());
-                }
+                String profilePictureUri = selectedImageUri != null ? selectedImageUri.toString() : null;
+                // Usar saveUserSettingsSync para garantir salvamento imediato no disco (sem delay)
+                preferencesManager.saveUserSettingsSync(newName, newGoal, newCup, notificationsEnabled, profilePictureUri);
             }
 
             view.showSaveSuccess();
+
+            // Já está salvo offline, notificar que está pronto
+            view.onSaveComplete();
+
+            // Disparar evento para atualizar outras fragments em tempo real
+            EventBus.getDefault().post(new ProfileUpdateEvent(newGoal, newCup, newName));
+
+            // Sincronizar com servidor de forma assíncrona (fire-and-forget)
+            syncUserDataToServer(newName, newGoal, newCup, notificationsEnabled);
         }
     }
 
@@ -132,6 +139,18 @@ public class ProfileController {
     // New helper: delegate to the view to open file chooser (called from ProfileFragment)
     public void openFileChooser() {
         view.openFileChooser();
+    }
+
+    /**
+     * Sincronizar dados do perfil com o servidor de forma assíncrona
+     * Executa em background sem bloquear a UI
+     * Se falhar, os dados locais já estão salvos (offline-first)
+     */
+    private void syncUserDataToServer(String name, int dailyGoal, int cupSize, boolean notificationsEnabled) {
+        // TODO: Implementar sincronização com Supabase quando API estiver disponível
+        // Por enquanto, os dados já estão salvos offline localmente
+        // A sincronização acontecerá quando houver conectividade
+        android.util.Log.d("ProfileController", "Dados salvos offline. Sincronizando com servidor...");
     }
 
     public interface ProfileView {
@@ -149,6 +168,7 @@ public class ProfileController {
         void showGoalError(String message);
         void showCupError(String message);
         void showSaveSuccess();
+        void onSaveComplete();
         void navigateToLogin();
         void openFileChooser();
     }

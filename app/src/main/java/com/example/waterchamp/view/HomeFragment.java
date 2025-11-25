@@ -22,8 +22,11 @@ import androidx.fragment.app.Fragment;
 
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.HomeController;
+import com.example.waterchamp.event.ProfileUpdateEvent;
 import com.example.waterchamp.model.UserDatabase;
 import com.google.android.material.snackbar.Snackbar;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 public class HomeFragment extends Fragment implements HomeController.HomeView {
 
@@ -163,5 +166,23 @@ public class HomeFragment extends Fragment implements HomeController.HomeView {
     public void onResume() {
         super.onResume();
         controller.updateUI();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe
+    public void onProfileUpdate(ProfileUpdateEvent event) {
+        // Atualizar o tamanho do botão quando o cup size mudar
+        if (UserDatabase.currentUser != null) {
+            UserDatabase.currentUser.setDailyGoal(event.dailyGoal);
+            UserDatabase.currentUser.setDefaultCupSize(event.cupSize);
+            UserDatabase.currentUser.setName(event.name);
+            updateUI();
+        }
     }
 }

@@ -251,6 +251,8 @@ public class ConsumoRepository {
      */
     public void clearTodayHistory() {
         historyCache.clearTodayRecords();
+        // Correção: Enviar atualização para o backend
+        syncTodayConsumption(null);
     }
 
     // ============ Callbacks ============

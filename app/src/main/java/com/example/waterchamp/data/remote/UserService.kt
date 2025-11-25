@@ -38,7 +38,7 @@ class UserService {
             // 2. Inserir dados públicos na tabela usuarios
             val usuario = Usuario(
                 nome = nome,
-                email = email
+                email = email.lowercase()
             )
 
             val result = SupabaseClient.client
@@ -73,7 +73,7 @@ class UserService {
                 .from("usuarios")
                 .select {
                     filter {
-                        eq("email", email)
+                        eq("email", email.lowercase())
                     }
                 }
                 .decodeSingleOrNull<Usuario>()
@@ -117,7 +117,7 @@ class UserService {
                 .from("usuarios")
                 .select {
                     filter {
-                        eq("email", email)
+                        eq("email", email.lowercase())
                     }
                 }
                 .decodeSingleOrNull<Usuario>()

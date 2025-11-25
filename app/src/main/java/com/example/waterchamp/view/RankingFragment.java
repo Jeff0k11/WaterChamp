@@ -18,8 +18,12 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.waterchamp.R;
 import com.example.waterchamp.controller.RankingController;
 import com.example.waterchamp.data.remote.RankingRealtimeService;
+import com.example.waterchamp.event.ProfileUpdateEvent;
 import com.example.waterchamp.model.User;
+import com.example.waterchamp.model.UserDatabase;
 import com.google.android.material.tabs.TabLayout;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 import java.util.List;
 
@@ -96,6 +100,9 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
 
         // Iniciar auto-refresh a cada 2 segundos
         startAutoRefresh();
+
+        // Registrar para ouvir eventos de atualização do perfil
+        EventBus.getDefault().register(this);
     }
 
     @Override
@@ -104,6 +111,27 @@ public class RankingFragment extends Fragment implements RankingController.Ranki
         Log.d("RankingFragment", "onPause() - Parando auto-refresh do ranking");
         // Parar auto-refresh quando fragment sai de vista
         stopAutoRefresh();
+
+        // Desregistrar do EventBus
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe
+    public void onProfileUpdate(ProfileUpdateEvent event) {
+        // Quando o perfil é atualizado, atualizar o usuário atual e recarregar ranking
+        if (UserDatabase.currentUser != null) {
+            UserDatabase.currentUser.setDailyGoal(event.dailyGoal);
+            UserDatabase.currentUser.setDefaultCupSize(event.cupSize);
+            UserDatabase.currentUser.setName(event.name);
+
+            Log.d("RankingFragment", "onProfileUpdate() - Atualizando ranking após mudança de perfil");
+            // Recarregar o ranking imediatamente
+            if (tabLayout.getSelectedTabPosition() == TAB_GROUP) {
+                controller.updateGroupRanking();
+            } else {
+                controller.updateGlobalRanking();
+            }
+        }
     }
 
     /**

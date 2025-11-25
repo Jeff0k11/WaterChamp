@@ -3,13 +3,10 @@ package com.example.waterchamp.data.remote
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
-import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,18 +23,11 @@ class ConsumoService {
         val total_ml: Int
     )
 
-    @Serializable
-    data class SetConsumoParams(
-        val p_usuario_id: Int,
-        val p_data: String,
-        val p_total_ml: Int
-    )
-
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     /**
-     * Sincronizar consumo diário usando a função RPC set_consumo_diario
-     * Faz upsert (insert ou update) do consumo
+     * Sincronizar consumo diário diretamente na tabela (SEM RPC)
+     * Faz upsert (insert ou update) do consumo baseado em usuario_id e data
      */
     suspend fun syncDailyConsumption(
         usuarioId: Int,
@@ -47,16 +37,18 @@ class ConsumoService {
         try {
             val dateStr = dateFormat.format(data)
 
-            val params = buildJsonObject {
-                put("p_usuario_id", usuarioId)
-                put("p_data", dateStr)
-                put("p_total_ml", totalMl)
-            }
-
-            SupabaseClient.client.postgrest.rpc(
-                function = "set_consumo_diario",
-                parameters = params
+            // Objeto para inserir/atualizar
+            val consumo = ConsumoDiario(
+                usuario_id = usuarioId,
+                data = dateStr,
+                total_ml = totalMl
             )
+
+            // Realiza UPSERT na tabela 'consumo_diario'
+            // IMPORTANTE: A tabela no Supabase deve ter uma constraint UNIQUE em (usuario_id, data)
+            SupabaseClient.client
+                .from("consumo_diario")
+                .upsert(consumo, onConflict = "usuario_id, data")
 
             true
         } catch (e: Exception) {
@@ -147,7 +139,6 @@ class ConsumoService {
                 .sortedByDescending { it.data }
 
             var streak = 0
-            val today = dateFormat.format(Date())
             val calendar = Calendar.getInstance()
 
             // Verificar dias consecutivos a partir de hoje

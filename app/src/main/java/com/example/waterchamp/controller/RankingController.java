@@ -19,7 +19,7 @@ public class RankingController {
 
     public void updateRanking() {
         // Buscar ranking diário do servidor
-        rankingRepository.getDailyRanking(100, new RankingRepository.RankingCallback() {
+        rankingRepository.getDailyRanking(new RankingRepository.RankingCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 // Atribuir ranks
