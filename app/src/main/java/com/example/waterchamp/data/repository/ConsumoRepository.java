@@ -61,40 +61,23 @@ public class ConsumoRepository {
 
     /**
      * Desfazer última adição ou remoção
+     *
+     * FIX: Não adiciona novo registro "Removido" para evitar duplicação de undo ao trocar de página.
+     * A remoção da HistoryCache já é suficiente. O totalMl será recalculado corretamente ao fazer sync.
      */
     public HistoryRecord undoLastWater() {
         HistoryRecord removedRecord = historyCache.removeLastRecord();
 
         if (removedRecord != null) {
-            if ("Adicionado".equals(removedRecord.getAction())) {
-                // Se foi adicionado, registrar a remoção
-                HistoryRecord undoRecord = new HistoryRecord(
-                    System.currentTimeMillis(),
-                    removedRecord.getAmount(),
-                    "Removido"
-                );
-                historyCache.addRecord(undoRecord);
+            // Apenas remover do histórico é suficiente.
+            // O HistoryCache.updateTodayTotal() vai recalcular automaticamente
+            // Não adicione novo registro "Removido" para evitar duplicação
 
-                // Atualizar estatística local
-                prefsManager.addToTotalConsumed(-removedRecord.getAmount());
+            Log.d("ConsumoRepository", "undoLastWater() - Removido registro: " + removedRecord.getAction() + " (" + removedRecord.getAmount() + "ml)");
+            Log.d("ConsumoRepository", "undoLastWater() - Novo total: " + historyCache.getTodayTotal() + "ml");
 
-                // Sincronizar com servidor
-                syncTodayConsumption(null);
-            } else if ("Removido".equals(removedRecord.getAction())) {
-                // Se foi removido, registrar a adição novamente (reverter o desfazimento)
-                HistoryRecord redoRecord = new HistoryRecord(
-                    System.currentTimeMillis(),
-                    removedRecord.getAmount(),
-                    "Adicionado"
-                );
-                historyCache.addRecord(redoRecord);
-
-                // Atualizar estatística local
-                prefsManager.addToTotalConsumed(removedRecord.getAmount());
-
-                // Sincronizar com servidor
-                syncTodayConsumption(null);
-            }
+            // Sincronizar com servidor com o novo total
+            syncTodayConsumption(null);
         }
 
         return removedRecord;

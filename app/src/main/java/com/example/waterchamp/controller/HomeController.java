@@ -46,23 +46,23 @@ public class HomeController {
 
     public void undoLastAction() {
         if (UserDatabase.currentUser != null && consumoRepository.hasRecordsToUndo()) {
+            int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
             HistoryRecord removed = consumoRepository.undoLastWater();
 
             if (removed != null) {
-                int currentWaterIntake = UserDatabase.currentUser.getWaterIntake();
-                int newIntake = currentWaterIntake - removed.getAmount();
+                // Obter o novo total correto do cache local (já recalculado)
+                int newTotal = consumoRepository.getTodayTotal();
 
-                // Prevenir undo se resultaria em valor negativo (mas permitir 0)
-                if (newIntake < 0) {
-                    view.showToast("Não é possível desfazer! Valor não pode ser negativo.");
-                    return;
+                // Se resultaria em valor negativo, zerar e avisar
+                if (newTotal < 0) {
+                    newTotal = 0;
+                    view.showToast("Não é possível desfazer! Valor zerado.");
                 }
 
-                // Atualizar UserDatabase para compatibilidade
-                UserDatabase.currentUser.setWaterIntake(newIntake);
-                UserDatabase.currentUser.addHistoryRecord(new HistoryRecord(System.currentTimeMillis(), removed.getAmount(), "Removido"));
+                // Atualizar UserDatabase com o novo total do cache
+                UserDatabase.currentUser.setWaterIntake(newTotal);
 
-                view.animateProgress(currentWaterIntake, newIntake);
+                view.animateProgress(currentWaterIntake, newTotal);
                 view.updateUI();
 
                 // Disparar evento para atualizar histórico em tempo real

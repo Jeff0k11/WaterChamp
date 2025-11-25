@@ -158,7 +158,7 @@ public class HomeFragment extends Fragment implements HomeController.HomeView {
     @Override
     public void showToast(String message) {
         if (getView() != null) {
-            Snackbar.make(getView(), message, 800).show(); // 800ms - mais rápido
+            Snackbar.make(getView(), message, 300).show(); // 300ms - rápido
         }
     }
 
