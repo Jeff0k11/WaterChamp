@@ -113,11 +113,56 @@ class RankingService {
     }
 
     /**
-     * Buscar ranking de um grupo específico
+     * Buscar ranking de um grupo específico (apenas membros do grupo)
      */
     suspend fun getGroupDailyRanking(grupoId: Int): List<RankingEntry> = withContext(Dispatchers.IO) {
-        // Implementação simplificada: Pega ranking geral e filtra (ineficiente para muitos dados, mas funcional localmente)
-        getDailyRanking(100)
+        try {
+            val today = dateFormat.format(Date())
+
+            // Buscar membros do grupo primeiro
+            val membrosResult = SupabaseClient.client
+                .from("membros_grupo")
+                .select(columns = Columns.raw("usuario_id")) {
+                    filter {
+                        eq("grupo_id", grupoId)
+                    }
+                }
+                .decodeList<Map<String, Int>>()
+
+            // Extrair IDs dos membros
+            val membrosIds = membrosResult.mapNotNull { it["usuario_id"] }.toList()
+
+            if (membrosIds.isEmpty()) {
+                return@withContext emptyList()
+            }
+
+            // Buscar consumo de hoje dos membros do grupo
+            val result = SupabaseClient.client
+                .from("consumo_diario")
+                .select(columns = Columns.raw("usuario_id, total_ml, usuarios(nome)")) {
+                    filter {
+                        eq("data", today)
+                        isIn("usuario_id", membrosIds)  // Filtrar apenas membros do grupo
+                    }
+                    order("total_ml", Order.DESCENDING)
+                    limit(100L)
+                }
+                .decodeList<ConsumoComUsuario>()
+
+            // Mapeia para RankingEntry
+            result.mapIndexed { index, item ->
+                RankingEntry(
+                    id = item.usuario_id,
+                    nome = item.usuarios?.nome ?: "Usuário ${item.usuario_id}",
+                    consumo_hoje = item.total_ml,
+                    total_30_dias = null,
+                    posicao = (index + 1).toLong()
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 
     // Blocking versions for Java interop
